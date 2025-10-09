@@ -5,32 +5,31 @@ import unittest
 
 from lib.exceptions import LibJusBrException
 from lib.json_utils import default_json_encoder
-from lib.pje.service import get_pje_service
+from lib.pje.service import get_trf1_service
 from lib.webdriver.driver import new_driver
 
 
 class TestTrf1(unittest.TestCase):
     def setUp(self):
-        self.driver = new_driver(headless=False)
+        self.driver = new_driver(headless=True)
 
     def tearDown(self):
         self.driver.quit()
 
     def test_trf1_get_data_from_cpf_that_does_not_exists(self):
         with self.assertRaises(LibJusBrException) as context:
-            get_pje_service(self.driver).get_simple_process_data(
-                cpf='02382814349',
-                tribunal='trf1',
-                grade='first',
+            get_trf1_service(self.driver).get_simple_process_data(
+                term='02382814349',
+
+                grade='pje1g',
             )
 
         self.assertEqual('Sua pesquisa não encontrou nenhum processo disponível.', context.exception.message)
 
     def test_trf1_get_simple_data_for_cpf_37626361334(self):
-        simple_data = get_pje_service(self.driver).get_simple_process_data(
-            cpf='37626361334',
-            tribunal='trf1',
-            grade='first',
+        simple_data = get_trf1_service(self.driver).get_simple_process_data(
+            term='37626361334',
+            grade='pje1g',
         )
 
         print(json.dumps(dataclasses.asdict(simple_data), indent=2, default=default_json_encoder))
@@ -46,10 +45,9 @@ class TestTrf1(unittest.TestCase):
         self.assertEqual(datetime.datetime(2025, 10, 7, 15, 28, 31), simple_data.last_update)
 
     def test_trf1_get_detailed_data_for_cpf_37626361334(self):
-        detailed_data = get_pje_service(self.driver).get_detailed_process_data(
-            cpf='37626361334',
-            tribunal='trf1',
-            grade='first',
+        detailed_data = get_trf1_service(self.driver).get_detailed_process_data(
+            term='37626361334',
+            grade='pje1g',
         )
 
         print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))

@@ -1,15 +1,16 @@
 import base64
 import dataclasses
-import datetime
 import os
 from typing import List
 
-from selenium.common import StaleElementReferenceException
+from selenium.common import StaleElementReferenceException, TimeoutException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.common.by import By
 
-from lib.cpf_utils import format_cpf
+from lib.date_utils import to_date_time, to_date, is_date_time
 from lib.exceptions import LibJusBrException
+from lib.format_utils import format_cpf, format_process_number
+from lib.log_utils import get_logger
 from lib.models import (
     SimpleProcessData,
     DetailedProcessData,
@@ -25,31 +26,58 @@ from lib.string_utils import only_digits
 from lib.webdriver.action import Action
 from lib.webdriver.driver import CustomWebDriver
 
+log = get_logger(__name__)
+
 
 @dataclasses.dataclass(frozen=True)
 class PJeAction(Action[PJePage]):
 
+    def search_term(self, term: str) -> 'PJeAction':
+        digs = only_digits(term)
+        if len(digs) == 11:
+            return self.search_cpf(digs)
+        elif len(digs) == 20:
+            return self.search_process_number(digs)
+        raise LibJusBrException(f'Cannot search term {term}')
+
     def search_cpf(self, cpf: str) -> 'PJeAction':
-        self.page.cpf_input().clear()
-        self.driver().wait_until_input_value_by_id(self.page.CPF_INPUT, '')
-        self.page.cpf_input().send_keys(format_cpf(cpf))
-        self.driver().wait_until_input_value_by_id(self.page.CPF_INPUT, format_cpf(cpf))
+        cpf_input = self.page.cpf_input()
+
+        (ActionChains(self.page.driver)
+         .move_to_element(cpf_input)
+         .click()
+         .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
+         .send_keys(str(format_cpf(cpf)))
+         .perform())
+        self.page.search_button().click()
+        return self
+
+    def search_process_number(self, process_number: str) -> 'PJeAction':
+        process_number_input = self.page.process_number_input()
+
+        (ActionChains(self.page.driver)
+         .move_to_element(process_number_input)
+         .click()
+         .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
+         .send_keys(str(format_process_number(process_number)))
+         .perform())
         self.page.search_button().click()
         return self
 
     def _wait_row_or_error(self):
         def _predicate(driver: CustomWebDriver) -> bool:
             has_rows = len(driver.find_element(By.ID, self.page.PROCESS_TABLE).find_elements(By.TAG_NAME, "tr")) > 0
-            has_alert = driver.find_by(By.ID, self.page.ERROR_MESSAGE)
+            has_alert = driver.find_elements(By.CLASS_NAME, self.page.ERROR_MESSAGE)
             try:
-                return has_rows or (has_alert and has_alert.is_displayed())
+                return has_rows or (len(has_alert) > 0 and has_alert[0].is_displayed())
             except StaleElementReferenceException:
                 return False
 
         self.driver().wait_condition(_predicate, timeout=20)
 
-        if self.page.error_message() and self.page.error_message().is_displayed():
-            raise LibJusBrException(self.page.error_message().text)
+        error_message = self.page.error_message_text()
+        if error_message:
+            raise LibJusBrException(error_message)
 
     def extract_simple_process_data(self):
         self._wait_row_or_error()
@@ -67,31 +95,36 @@ class PJeAction(Action[PJePage]):
             plaintiff=plaintiff.strip(),
             defendant=defendant.strip(),
             status=status.strip(),
-            last_update=datetime.datetime.strptime(
-                status_at.strip().replace('(', '').replace(')', ''),
-                '%d/%m/%Y %H:%M:%S'),
+            last_update=to_date_time(
+                status_at.strip().replace('(', '').replace(')', '')
+            ),
         )
 
     def _extract_process_data(self) -> ProcessData:
         return ProcessData(
             process_number=self.page.process_number(),
-            distribution_date=datetime.datetime.strptime(self.page.distribution_date(), '%d/%m/%Y').date(),
+            distribution_date=to_date(self.page.distribution_date()),
             jurisdiction=self.page.jurisdiction(),
             judicial_class=self.page.judicial_class(),
             judge_entity=self.page.judge_entity(),
+            collegiate_judge_entity=self.page.collegiate_judge_entity(),
+            referenced_process_number=self.page.referenced_process_number(),
             subject=self.page.subject(),
         )
 
     @classmethod
-    def _extract_document(cls, doc) -> DocumentParty:
+    def _extract_document(cls, doc) -> DocumentParty | None:
         doc = str(doc).upper()
+        only_digits_doc = only_digits(doc)
         if 'CPF' in str(doc):
-            return DocumentParty.of_cpf(only_digits(doc))
+            return DocumentParty.of_cpf(only_digits_doc)
         elif 'CNPJ' in str(doc):
-            return DocumentParty.of_cnpj(only_digits(doc))
+            return DocumentParty.of_cnpj(only_digits_doc)
         elif 'OAB' in str(doc):
             return DocumentParty.of_oab(doc.replace('OAB', '').strip())
-        raise LibJusBrException(f'cannot get document for {doc}')
+        if only_digits_doc:
+            raise LibJusBrException(f'cannot get document for {doc}')
+        return None
 
     @classmethod
     def _extract_parties(cls, elements):
@@ -107,7 +140,7 @@ class PJeAction(Action[PJePage]):
 
             parties.append(Party(
                 name=parts[0].strip(),
-                documents=[cls._extract_document(doc) for doc in documents],
+                documents=list(filter(lambda x: x is not None, [cls._extract_document(doc) for doc in documents])),
                 role=role.replace(')', '').strip()
             ))
 
@@ -135,10 +168,10 @@ class PJeAction(Action[PJePage]):
             document_ref = None
             document_date = None
         return Movement(
-            created_at=datetime.datetime.strptime(created_at, '%d/%m/%Y %H:%M:%S'),
+            created_at=to_date_time(created_at),
             description=description,
-            document_date=datetime.datetime.strptime(
-                document_date, '%d/%m/%Y %H:%M:%S'
+            document_date=to_date_time(
+                document_date
             ) if document_date else None,
             document_ref=document_ref,
         )
@@ -182,56 +215,103 @@ class PJeAction(Action[PJePage]):
 
     def _read_file_remove_and_close(self):
         def _wait_file_predicate(driver: CustomWebDriver):
-            list_files = os.listdir(driver.download_folder)
-            for download_file in list_files:
-                if download_file.endswith('.crdownload'):
-                    return False
-            return len(list_files) > 0
+            return driver.downloads_quantity() > 0
 
         self.page.driver.wait_condition(_wait_file_predicate)
 
         file = os.path.join(self.page.driver.download_folder, os.listdir(self.page.driver.download_folder)[0])
 
+        log.info(f'downloaded file {file}')
+
         with open(file, 'rb') as f:
             file_b64 = base64.b64encode(f.read()).decode('utf-8')
+
         os.remove(file)
+        log.info(f'removed file {file}')
 
         self.page.close_current_window()
         return file_b64
 
-    def _extract_attachments(self) -> List[Attachment]:
-        attachments = []
-        rows = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')
-
+    def _extract_attachment(self, row) -> Attachment:
         def _wait_window_predicate(driver: CustomWebDriver):
             return len(driver.window_handles) > 2
 
-        for row in rows:
-            td1, td2 = row.find_elements(By.TAG_NAME, 'td')
-            anchor_tag = td1.find_element(By.TAG_NAME, 'a')
-            date, description = anchor_tag.text.split('\n')[1].split(' - ', maxsplit=1)
-            self.driver().scroll_to(row)
+        td1, td2 = row.find_elements(By.TAG_NAME, 'td')
+        anchor_tag = td1.find_element(By.TAG_NAME, 'a')
+        parts = anchor_tag.text.split('\n')[-1].split(' - ')
+        date = next((x for x in parts if is_date_time(x)), None)
+        parts.remove(date)
+        description = ' '.join(parts)
+        self.driver().scroll_to(row)
 
-            # Download the file
-            anchor_tag.click()
-            self.page.driver.wait_condition(_wait_window_predicate)
+        anchor_tag.click()
+        self.page.driver.wait_condition(_wait_window_predicate)
 
-            self.page.switch_window()
+        self.page.switch_window()
+        try:
             self.page.download_pdf_file().click()
-            file_b64 = self._read_file_remove_and_close()
+        except TimeoutException as ex:
+            # Sometimes the file is downloaded without the click (direct downloads)
+            if self.page.driver.downloads_quantity() == 0:
+                log.error(f'failed to download attachment {description}')
+                self.page.close_current_window()
+                return Attachment(
+                    created_at=to_date_time(date),
+                    description=description,
+                    file_b64=None,
+                    protocol_b64=None
+                )
 
-            # Download the protocol
-            td2.click()
-            self.page.driver.wait_condition(_wait_window_predicate)
-            self.page.switch_window()
-            protocol_b64 = self._read_file_remove_and_close()
+        file_b64 = self._read_file_remove_and_close()
 
-            attachments.append(Attachment(
-                created_at=datetime.datetime.strptime(date, '%d/%m/%Y %H:%M:%S'),
-                description=description,
-                file_b64=file_b64,
-                protocol_b64=protocol_b64,
-            ))
+        # Download the protocol
+        td2.click()
+        self.page.driver.wait_condition(_wait_window_predicate)
+        self.page.switch_window()
+        protocol_b64 = self._read_file_remove_and_close()
+
+        return Attachment(
+            created_at=to_date_time(date),
+            description=description,
+            file_b64=file_b64,
+            protocol_b64=protocol_b64,
+        )
+
+    def _extract_attachments(self) -> List[Attachment]:
+        attachments = []
+        quantity = self.page.attachments_quantity()
+
+        while len(attachments) != quantity:
+            rows = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')
+            first_row_text = rows[0].find_element(By.TAG_NAME, 'td').text
+
+            def _first_row_changed_predicate(driver):
+                try:
+                    current_text = driver.find_element(
+                        By.ID, self.page.ATTACHMENTS_TABLE_BODY
+                    ).find_elements(By.TAG_NAME, 'tr')[0].find_element(
+                        By.TAG_NAME, 'td'
+                    ).text
+                    return first_row_text != current_text
+                except StaleElementReferenceException:
+                    return False
+
+            attachments.extend([self._extract_attachment(x) for x in rows])
+
+            if len(attachments) == quantity:
+                break
+
+            page_input = self.page.attachments_page_input()
+            next_val = int(page_input.get_attribute('value')) + 1
+            (ActionChains(self.page.driver)
+             .move_to_element(page_input)
+             .click()
+             .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
+             .send_keys(str(next_val))
+             .perform())
+
+            self.driver().wait_condition(_first_row_changed_predicate, timeout=20)
+
         return attachments
 
     def extract_detailed_process_data(self):

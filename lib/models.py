@@ -22,6 +22,8 @@ class ProcessData:
     jurisdiction: str = dataclasses.field()
     judicial_class: str = dataclasses.field()
     judge_entity: str = dataclasses.field()
+    collegiate_judge_entity: str = dataclasses.field()
+    referenced_process_number: str = dataclasses.field()
     subject: str = dataclasses.field()
 
 
@@ -68,8 +70,8 @@ class Movement:
 class Attachment:
     created_at: datetime.datetime = dataclasses.field()
     description: str = dataclasses.field()
-    file_b64: str = dataclasses.field()
-    protocol_b64: str = dataclasses.field()
+    file_b64: str | None = dataclasses.field()
+    protocol_b64: str | None = dataclasses.field()
 
 
 @dataclasses.dataclass(frozen=True)

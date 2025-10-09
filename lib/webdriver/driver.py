@@ -196,6 +196,14 @@ class CustomWebDriver(WebDriver):
             lambda x: x.execute_script("return document.readyState") == "complete"
         )
 
+    def downloads_quantity(self):
+        list_files = os.listdir(self.download_folder)
+        download_count = 0
+        for download_file in list_files:
+            if not download_file.endswith('.crdownload'):
+                download_count += 1
+        return download_count
+
 
 def new_driver(
         headless: bool = HEADLESS,
