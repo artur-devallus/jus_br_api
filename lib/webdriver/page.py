@@ -17,10 +17,13 @@ class Page:
         self.driver.get(url)
 
     def switch_window(self):
-        next_window = self.driver.window_handles.index(self.driver.current_window_handle) + 1
-        if next_window >= len(self.driver.window_handles):
-            next_window = 0
-        self.driver.switch_to.window(self.driver.window_handles[next_window])
+        index_next = self.driver.window_handles.index(self.driver.current_window_handle) + 1
+        if index_next >= len(self.driver.window_handles):
+            index_next = 0
+
+        next_window = self.driver.window_handles[index_next]
+        self.driver.switch_to.window(next_window)
+        self.driver.wait_condition(lambda x: x.current_window_handle == next_window)
 
     def close_current_window(self):
         if len(self.driver.window_handles) == 1:
@@ -28,4 +31,4 @@ class Page:
         current = self.driver.current_window_handle
         other = [x for x in self.driver.window_handles if x != current]
         self.driver.close()
-        self.driver.switch_to.window(other[0])
+        self.driver.switch_to.window(other[-1])
