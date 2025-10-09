@@ -111,7 +111,7 @@ class CustomWebDriver(WebDriver):
         return self.wait_presence(By.ID, val, timeout)
 
     def find_by(self, by, val, timeout: int = DEFAULT_TIMEOUT) -> WebElement:
-        self.wait_visibility(by, val, timeout)
+        self.wait_presence(by, val, timeout)
         return self.find_element(by, val)
 
     def find_by_id(self, val: str, timeout: int = DEFAULT_TIMEOUT) -> WebElement:
