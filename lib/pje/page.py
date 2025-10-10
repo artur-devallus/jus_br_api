@@ -221,27 +221,27 @@ class TRF5PJePage(PJePage):
 
     PROCESS_TABLE: str = dataclasses.field(default='fPP:processosTable:tb')
 
-    PROCESS_NUMBER: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id153')
-    DISTRIBUTION_DATE: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id165')
-    JUDICIAL_CLASS: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id176')
-    SUBJECT: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id187')
-    JURISDICTION: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id200')
-    COLLEGIATE_JUDGE_ENTITY: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id211')
-    JUDGE_ENTITY: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id224')
-    REFERENCED_PROCESS_NUMBER: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id237')
+    PROCESS_NUMBER: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id146')
+    DISTRIBUTION_DATE: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id158')
+    JUDICIAL_CLASS: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id169')
+    SUBJECT: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id180')
+    JURISDICTION: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id193')
+    COLLEGIATE_JUDGE_ENTITY: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id204')
+    JUDGE_ENTITY: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id217')
+    REFERENCED_PROCESS_NUMBER: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id230')
 
     ACTIVE_PARTY_TABLE_BODY: str = dataclasses.field(
-        default='j_id145:processoPartesPoloAtivoResumidoList:tb'
+        default='j_id140:processoPartesPoloAtivoResumidoList:tb'
     )
     PASSIVE_PARTY_TABLE_BODY: str = dataclasses.field(
-        default='j_id145:processoPartesPoloPassivoResumidoList:tb'
+        default='j_id140:processoPartesPoloPassivoResumidoList:tb'
     )
 
-    MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id145:processoEventoPanel_body')
-    MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id145:processoEvento:tb')
-    MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id145:j_id556:j_id557Input')
+    MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id140:processoEventoPanel_body')
+    MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id140:processoEvento:tb')
+    MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id140:j_id545:j_id546Input')
 
-    ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTabPanel_body')
-    ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTab:tb')
-    ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id145:j_id648:j_id649Input')
+    ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTabPanel_body')
+    ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTab:tb')
+    ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id140:j_id648:j_id649Input')
     DOWNLOAD_PDF_FILE: str = dataclasses.field(default='j_id39:downloadPDF')

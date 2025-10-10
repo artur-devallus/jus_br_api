@@ -1,3 +1,5 @@
+import os
+
 URLS = dict(
     trf1=dict(
         pje1g='https://pje1g.trf1.jus.br',
@@ -16,3 +18,4 @@ URLS = dict(
         pje2g='https://pje2g.trf6.jus.br',
     )
 )
+QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '50'))

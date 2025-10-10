@@ -21,6 +21,7 @@ from lib.models import (
     Movement,
     Attachment
 )
+from lib.pje.constants import QUERY_TIMEOUT
 from lib.pje.page import PJePage
 from lib.string_utils import only_digits
 from lib.webdriver.action import Action
@@ -88,7 +89,7 @@ class PJeAction(Action[PJePage]):
         self.page.search_button().click()
         return self
 
-    def _wait_row_or_error(self):
+    def _wait_row_or_error(self, timeout: int = QUERY_TIMEOUT):
         def _predicate(driver: CustomWebDriver) -> bool:
             has_rows = len(driver.find_element(By.ID, self.page.PROCESS_TABLE).find_elements(By.TAG_NAME, "tr")) > 0
             has_alert = driver.find_elements(By.CLASS_NAME, self.page.ERROR_MESSAGE)
@@ -97,7 +98,10 @@ class PJeAction(Action[PJePage]):
             except StaleElementReferenceException:
                 return False
 
-        self.driver().wait_condition(_predicate, timeout=20)
+        try:
+            self.driver().wait_condition(_predicate, timeout=timeout)
+        except TimeoutException:
+            raise LibJusBrException(f'A consulta está demorando mais do que o esperado, tente novamentes')
 
         error_message = self.page.error_message_text()
         if error_message:
@@ -138,7 +142,6 @@ class PJeAction(Action[PJePage]):
             referenced_process_number=self.page.referenced_process_number(),
             subject=self.page.subject(),
         )
-
 
     @classmethod
     def _extract_document(cls, doc) -> DocumentParty | None:
