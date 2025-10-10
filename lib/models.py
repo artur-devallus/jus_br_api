@@ -5,14 +5,14 @@ from typing import List, Literal
 
 @dataclasses.dataclass(frozen=True)
 class SimpleProcessData:
-    process_class: str = dataclasses.field()
-    process_class_abv: str = dataclasses.field()
+    process_class: str | None = dataclasses.field()
+    process_class_abv: str | None = dataclasses.field()
     process_number: str = dataclasses.field()
     subject: str = dataclasses.field()
     plaintiff: str = dataclasses.field()
     defendant: str = dataclasses.field()
-    status: str = dataclasses.field()
-    last_update: datetime.datetime = dataclasses.field()
+    status: str | None = dataclasses.field()
+    last_update: datetime.datetime | None = dataclasses.field()
 
 
 @dataclasses.dataclass(frozen=True)

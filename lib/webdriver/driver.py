@@ -204,6 +204,9 @@ class CustomWebDriver(WebDriver):
                 download_count += 1
         return download_count
 
+    def is_headless(self):
+        return '--headless=new' in self.options.arguments
+
 
 def new_driver(
         headless: bool = HEADLESS,
