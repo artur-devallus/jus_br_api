@@ -16,7 +16,7 @@ from selenium_stealth import stealth
 
 from lib.webdriver.constants import (
     HEADLESS, WEBDRIVER_BASE_PATH, CHROME_BINARY,
-    CHROMEDRIVER_PATH, PAGE_LOAD_TIMEOUT, DEFAULT_TIMEOUT, PROXY
+    CHROMEDRIVER_PATH, PAGE_LOAD_TIMEOUT, DEFAULT_TIMEOUT, PROXY, DEFALT_CHROME_AGENT
 )
 
 
@@ -226,7 +226,7 @@ def new_driver(
     if headless:
         options.add_argument('--headless=new')
 
-    proxy_server = '200.85.167.254:8080'
+    proxy_server = '14.251.13.0:8080'
     options.add_argument('--no-sandbox')
     if proxy:
         options.add_argument(f'--proxy-server={proxy_server}')
@@ -242,6 +242,12 @@ def new_driver(
     options.add_argument('--disable-browser-side-navigation')
     options.add_argument('--no-zygote')
     options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument("--disable-features=NetworkPrediction,Prefetch")
+    options.add_argument("--disable-blink-features=Prefetch")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-prerender-from-omnibox")
+    options.add_argument(f'--user-agent={DEFALT_CHROME_AGENT}')
+
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
 
@@ -266,6 +272,7 @@ def new_driver(
     })
     driver.maximize_window()
     driver.set_window_rect(x=0, y=0, width=1366, height=768)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     l: Any = ["pt-BR", 'pt']
     stealth(
         driver,

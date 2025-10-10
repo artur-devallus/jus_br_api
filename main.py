@@ -17,8 +17,8 @@ if __name__ == '__main__':
     with new_driver(
             headless=False
     ) as driver:
-        data = get_trf3_service(driver).get_detailed_process_data(
-            term=term, grade='pje2g'
+        data = get_trf3_service(driver).get_detailed_process(
+            term=term, grade='pje1g'
         )
 
         json_data = dataclasses.asdict(data)

@@ -29,8 +29,32 @@ from lib.webdriver.driver import CustomWebDriver
 log = get_logger(__name__)
 
 
+def _first_row_changed_predicate(driver, id_table, first_row_text):
+    try:
+        current_text = driver.find_element(
+            By.ID, id_table
+        ).find_elements(By.TAG_NAME, 'tr')[0].find_element(
+            By.TAG_NAME, 'td'
+        ).text
+        return first_row_text != current_text
+    except StaleElementReferenceException:
+        return False
+
+
+def _window_handles_gt_predicate(driver, expected_len):
+    return len(driver.window_handles) > expected_len
+
+
 @dataclasses.dataclass(frozen=True)
 class PJeAction(Action[PJePage]):
+
+    def enter_site(self) -> 'PJeAction':
+        if 'Denied' in self.page.driver.title:
+            raise LibJusBrException(f'Access denied for {self.page.driver.current_url}')
+        self.page.query_process().click()
+        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 1))
+        self.page.close_current_window()
+        return self
 
     def search_term(self, term: str) -> 'PJeAction':
         digs = only_digits(term)
@@ -79,26 +103,29 @@ class PJeAction(Action[PJePage]):
         if error_message:
             raise LibJusBrException(error_message)
 
-    def extract_simple_process_data(self):
+    def extract_process_list(self) -> List[SimpleProcessData]:
         self._wait_row_or_error()
-        row = self.page.get_process_row()
-        tds = row.find_elements(By.TAG_NAME, "td")
-        process_class, process_details, persons = tds[1].text.split('\n')
-        status, status_at = tds[2].text.rsplit('(', maxsplit=1)
-        plaintiff, defendant = persons.split(' X ')
-        process_number, subject = process_details.split(' - ')
-        return SimpleProcessData(
-            process_class=process_class.strip(),
-            process_class_abv=process_number.split(' ')[0].strip(),
-            process_number=process_number.split(' ')[1].strip(),
-            subject=subject.strip(),
-            plaintiff=plaintiff.strip(),
-            defendant=defendant.strip(),
-            status=status.strip(),
-            last_update=to_date_time(
-                status_at.strip().replace('(', '').replace(')', '')
-            ),
-        )
+        rows = self.page.get_process_rows()
+        process_list = []
+        for row in rows:
+            tds = row.find_elements(By.TAG_NAME, "td")
+            process_class, process_details, persons = tds[1].text.split('\n')
+            status, status_at = tds[2].text.rsplit('(', maxsplit=1)
+            plaintiff, defendant = persons.split(' X ')
+            process_number, subject = process_details.split(' - ')
+            process_list.append(SimpleProcessData(
+                process_class=process_class.strip(),
+                process_class_abv=process_number.split(' ')[0].strip(),
+                process_number=process_number.split(' ')[1].strip(),
+                subject=subject.strip(),
+                plaintiff=plaintiff.strip(),
+                defendant=defendant.strip(),
+                status=status.strip(),
+                last_update=to_date_time(
+                    status_at.strip().replace('(', '').replace(')', '')
+                ),
+            ))
+        return process_list
 
     def _extract_process_data(self) -> ProcessData:
         return ProcessData(
@@ -112,14 +139,30 @@ class PJeAction(Action[PJePage]):
             subject=self.page.subject(),
         )
 
+
     @classmethod
     def _extract_document(cls, doc) -> DocumentParty | None:
         doc = str(doc).upper()
         only_digits_doc = only_digits(doc)
         if 'CPF' in str(doc):
-            return DocumentParty.of_cpf(only_digits_doc)
+            return DocumentParty.of_cpf(
+                doc
+                .replace('CPF', '')
+                .replace('.', '')
+                .replace('-', '')
+                .replace(':', '')
+                .strip()
+            )
         elif 'CNPJ' in str(doc):
-            return DocumentParty.of_cnpj(only_digits_doc)
+            return DocumentParty.of_cnpj(
+                doc
+                .replace('CNPJ', '')
+                .replace('.', '')
+                .replace('-', '')
+                .replace(':', '')
+                .replace('/', '')
+                .strip()
+            )
         elif 'OAB' in str(doc):
             return DocumentParty.of_oab(doc.replace('OAB', '').strip())
         if only_digits_doc:
@@ -176,6 +219,15 @@ class PJeAction(Action[PJePage]):
             document_ref=document_ref,
         )
 
+    def _input_next(self, page_input):
+        next_val = int(page_input.get_attribute('value')) + 1
+        (ActionChains(self.page.driver)
+         .move_to_element(page_input)
+         .click()
+         .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
+         .send_keys(str(next_val))
+         .perform())
+
     def _extract_movements(self) -> List[Movement]:
         movements = []
         quantity = self.page.movements_quantity()
@@ -184,32 +236,16 @@ class PJeAction(Action[PJePage]):
             rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
             first_row_text = rows[0].find_element(By.TAG_NAME, 'td').text
 
-            def _first_row_changed_predicate(driver):
-                try:
-                    current_text = driver.find_element(
-                        By.ID, self.page.MOVEMENTS_TABLE_BODY
-                    ).find_elements(By.TAG_NAME, 'tr')[0].find_element(
-                        By.TAG_NAME, 'td'
-                    ).text
-                    return first_row_text != current_text
-                except StaleElementReferenceException:
-                    return False
-
             movements.extend([self._extract_movement(x) for x in rows])
 
             if len(movements) == quantity:
                 break
 
-            page_input = self.page.movements_page_input()
-            next_val = int(page_input.get_attribute('value')) + 1
-            (ActionChains(self.page.driver)
-             .move_to_element(page_input)
-             .click()
-             .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
-             .send_keys(str(next_val))
-             .perform())
+            self._input_next(self.page.movements_page_input())
 
-            self.driver().wait_condition(_first_row_changed_predicate, timeout=20)
+            self.driver().wait_condition(lambda x: _first_row_changed_predicate(
+                x, self.page.MOVEMENTS_TABLE_BODY, first_row_text
+            ), timeout=20)
 
         return movements
 
@@ -232,11 +268,19 @@ class PJeAction(Action[PJePage]):
         self.page.close_current_window()
         return file_b64
 
-    def _extract_attachment(self, row) -> Attachment:
-        def _wait_window_predicate(driver: CustomWebDriver):
-            return len(driver.window_handles) > 2
+    def _is_downloadable_window(self, description):
+        if 'login' in self.page.driver.current_url:
+            log.warning(f'Document {description} needs login to be downloaded')
+            return False
+        elif 'Denied' in self.page.driver.title:
+            log.warning(f'Document {description} access denied')
+            return False
+        else:
+            return True
 
-        td1, td2 = row.find_elements(By.TAG_NAME, 'td')
+    def _extract_attachment(self, row_index) -> Attachment:
+        row = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')[row_index]
+        td1, _ = row.find_elements(By.TAG_NAME, 'td')
         anchor_tag = td1.find_element(By.TAG_NAME, 'a')
         parts = anchor_tag.text.split('\n')[-1].split(' - ')
         date = next((x for x in parts if is_date_time(x)), None)
@@ -245,30 +289,37 @@ class PJeAction(Action[PJePage]):
         self.driver().scroll_to(row)
 
         anchor_tag.click()
-        self.page.driver.wait_condition(_wait_window_predicate)
-
+        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 2))
         self.page.switch_window()
-        try:
-            self.page.download_pdf_file().click()
-        except TimeoutException as ex:
-            # Sometimes the file is downloaded without the click (direct downloads)
-            if self.page.driver.downloads_quantity() == 0:
-                log.error(f'failed to download attachment {description}')
+
+        file_b64 = None
+        if self._is_downloadable_window(description):
+            try:
+                self.page.download_pdf_file().click()
+                file_b64 = self._read_file_remove_and_close()
+            except TimeoutException:
+                # Sometimes the file is downloaded without the click (direct downloads)
+                if self.page.driver.downloads_quantity() == 0:
+                    log.error(f'failed to download attachment {description}')
+                    self.page.close_current_window()
+                else:
+                    file_b64 = self._read_file_remove_and_close()
+        else:
+            self.page.close_current_window()
+
+        protocol_b64 = None
+        row = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')[row_index]
+        _, td2 = row.find_elements(By.TAG_NAME, 'td')
+
+        if len(td2.find_elements(By.TAG_NAME, 'a')) > 0:
+            td2.click()
+            self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 2))
+            self.page.switch_window()
+
+            if self._is_downloadable_window(description):
+                protocol_b64 = self._read_file_remove_and_close()
+            else:
                 self.page.close_current_window()
-                return Attachment(
-                    created_at=to_date_time(date),
-                    description=description,
-                    file_b64=None,
-                    protocol_b64=None
-                )
-
-        file_b64 = self._read_file_remove_and_close()
-
-        # Download the protocol
-        td2.click()
-        self.page.driver.wait_condition(_wait_window_predicate)
-        self.page.switch_window()
-        protocol_b64 = self._read_file_remove_and_close()
 
         return Attachment(
             created_at=to_date_time(date),
@@ -283,46 +334,42 @@ class PJeAction(Action[PJePage]):
 
         while len(attachments) != quantity:
             rows = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')
+            rows_quantity = len(rows)
             first_row_text = rows[0].find_element(By.TAG_NAME, 'td').text
 
-            def _first_row_changed_predicate(driver):
-                try:
-                    current_text = driver.find_element(
-                        By.ID, self.page.ATTACHMENTS_TABLE_BODY
-                    ).find_elements(By.TAG_NAME, 'tr')[0].find_element(
-                        By.TAG_NAME, 'td'
-                    ).text
-                    return first_row_text != current_text
-                except StaleElementReferenceException:
-                    return False
-
-            attachments.extend([self._extract_attachment(x) for x in rows])
+            for i in range(rows_quantity):
+                attachments.append(self._extract_attachment(i))
 
             if len(attachments) == quantity:
                 break
 
-            page_input = self.page.attachments_page_input()
-            next_val = int(page_input.get_attribute('value')) + 1
-            (ActionChains(self.page.driver)
-             .move_to_element(page_input)
-             .click()
-             .key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL)
-             .send_keys(str(next_val))
-             .perform())
-
-            self.driver().wait_condition(_first_row_changed_predicate, timeout=20)
-
+            self._input_next(self.page.attachments_page_input())
+            self.driver().wait_condition(lambda x: _first_row_changed_predicate(
+                x, self.page.ATTACHMENTS_TABLE_BODY, first_row_text
+            ), timeout=20)
         return attachments
 
-    def extract_detailed_process_data(self):
-        def _wait_window_predicate(driver: CustomWebDriver):
-            return len(driver.window_handles) > 1
-
+    def extract_detailed_process(self, process_index_or_number: str = 0):
         self._wait_row_or_error()
-        row = self.page.get_process_row()
+        row = None
+        rows = self.page.get_process_rows()
+        if isinstance(process_index_or_number, int):
+            if process_index_or_number < len(rows):
+                row = rows[process_index_or_number]
+        else:
+            process_list = self.extract_process_list()
+            for i in range(len(process_list)):
+                process = process_list[i]
+                if only_digits(process.process_number) == only_digits(process_index_or_number):
+                    row = rows[process_index_or_number]
+                    break
+
+        if row is None:
+            raise LibJusBrException(f'cannot find process {process_index_or_number}')
+
         tds = row.find_elements(By.TAG_NAME, "td")
         tds[0].click()
-        self.page.driver.wait_condition(_wait_window_predicate)
+        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 1))
 
         self.page.switch_window()
         detailed_data = DetailedProcessData(

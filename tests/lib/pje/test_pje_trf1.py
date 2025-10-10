@@ -11,14 +11,14 @@ from lib.webdriver.driver import new_driver
 
 class TestTrf1(unittest.TestCase):
     def setUp(self):
-        self.driver = new_driver(headless=True)
+        self.driver = new_driver()
 
     def tearDown(self):
         self.driver.quit()
 
     def test_trf1_get_data_from_cpf_that_does_not_exists(self):
         with self.assertRaises(LibJusBrException) as context:
-            get_trf1_service(self.driver).get_simple_process_data(
+            get_trf1_service(self.driver).get_process_list(
                 term='02382814349',
 
                 grade='pje1g',
@@ -27,12 +27,15 @@ class TestTrf1(unittest.TestCase):
         self.assertEqual('Sua pesquisa não encontrou nenhum processo disponível.', context.exception.message)
 
     def test_trf1_get_simple_data_for_cpf_37626361334(self):
-        simple_data = get_trf1_service(self.driver).get_simple_process_data(
+        process_list = get_trf1_service(self.driver).get_process_list(
             term='37626361334',
             grade='pje1g',
         )
 
-        print(json.dumps(dataclasses.asdict(simple_data), indent=2, default=default_json_encoder))
+        print(json.dumps(list(map(dataclasses.asdict, process_list)), indent=2, default=default_json_encoder))
+
+        self.assertEqual(1, len(process_list))
+        simple_data = process_list[0]
 
         self.assertIsNotNone(simple_data)
         self.assertEqual('PROCEDIMENTO DO JUIZADO ESPECIAL CÍVEL', simple_data.process_class)
@@ -45,7 +48,7 @@ class TestTrf1(unittest.TestCase):
         self.assertEqual(datetime.datetime(2025, 10, 7, 15, 28, 31), simple_data.last_update)
 
     def test_trf1_get_detailed_data_for_cpf_37626361334(self):
-        detailed_data = get_trf1_service(self.driver).get_detailed_process_data(
+        detailed_data = get_trf1_service(self.driver).get_detailed_process(
             term='37626361334',
             grade='pje1g',
         )

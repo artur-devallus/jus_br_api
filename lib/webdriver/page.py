@@ -24,5 +24,7 @@ class Page:
             return
         current = self.driver.current_window_handle
         other = [x for x in self.driver.window_handles if x != current]
+        target_window = other[-1]
         self.driver.close()
-        self.driver.switch_to.window(other[-1])
+        self.driver.switch_to.window(target_window)
+        self.driver.wait_condition(lambda x: x.current_window_handle == target_window)
