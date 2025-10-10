@@ -8,14 +8,6 @@ from lib.webdriver.page import Page
 
 @dataclasses.dataclass(frozen=True)
 class PJePage(Page):
-    CPF_INPUT: str = dataclasses.field()
-
-    PROCESS_NUMBER_INPUT: str = dataclasses.field()
-    SEARCH_BUTTON: str = dataclasses.field()
-    ERROR_MESSAGE: str = dataclasses.field()
-
-    PROCESS_TABLE: str = dataclasses.field()
-
     PROCESS_NUMBER: str = dataclasses.field()
     DISTRIBUTION_DATE: str = dataclasses.field()
     JUDICIAL_CLASS: str = dataclasses.field()
@@ -39,6 +31,15 @@ class PJePage(Page):
     QUERY_PROCESS: str = dataclasses.field(
         default="//a[text()[contains(.,'Consulta')]]"
     )
+
+    CPF_INPUT: str = dataclasses.field(default='fPP:dpDec:documentoParte')
+    PROCESS_NUMBER_INPUT: str = dataclasses.field(
+        default='fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso'
+    )
+    SEARCH_BUTTON: str = dataclasses.field(default='fPP:searchProcessos')
+    ERROR_MESSAGE: str = dataclasses.field(default='alert-danger')
+
+    PROCESS_TABLE: str = dataclasses.field(default='fPP:processosTable:tb')
 
     def query_process(self):
         self.driver.wait_presence(By.XPATH, self.QUERY_PROCESS)
@@ -132,15 +133,6 @@ class PJePage(Page):
 
 @dataclasses.dataclass(frozen=True)
 class TRF1PJePage(PJePage):
-    CPF_INPUT: str = dataclasses.field(default='fPP:dpDec:documentoParte')
-    PROCESS_NUMBER_INPUT: str = dataclasses.field(
-        default='fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso'
-    )
-    SEARCH_BUTTON: str = dataclasses.field(default='fPP:searchProcessos')
-    ERROR_MESSAGE: str = dataclasses.field(default='alert-danger')
-
-    PROCESS_TABLE: str = dataclasses.field(default='fPP:processosTable:tb')
-
     PROCESS_NUMBER: str = dataclasses.field(default='j_id136:processoTrfViewView:j_id144')
     DISTRIBUTION_DATE: str = dataclasses.field(default='j_id136:processoTrfViewView:j_id156')
     JUDICIAL_CLASS: str = dataclasses.field(default='j_id136:processoTrfViewView:j_id167')
@@ -175,15 +167,6 @@ class TRF1PJePage(PJePage):
 
 @dataclasses.dataclass(frozen=True)
 class TRF3PJePage(PJePage):
-    CPF_INPUT: str = dataclasses.field(default='fPP:dpDec:documentoParte')
-    PROCESS_NUMBER_INPUT: str = dataclasses.field(
-        default='fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso'
-    )
-    SEARCH_BUTTON: str = dataclasses.field(default='fPP:searchProcessos')
-    ERROR_MESSAGE: str = dataclasses.field(default='alert-danger')
-
-    PROCESS_TABLE: str = dataclasses.field(default='fPP:processosTable:tb')
-
     PROCESS_NUMBER: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id153')
     DISTRIBUTION_DATE: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id165')
     JUDICIAL_CLASS: str = dataclasses.field(default='j_id145:processoTrfViewView:j_id176')
@@ -207,20 +190,12 @@ class TRF3PJePage(PJePage):
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTab:tb')
     ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id145:j_id648:j_id649Input')
+
     DOWNLOAD_PDF_FILE: str = dataclasses.field(default='j_id39:downloadPDF')
 
 
 @dataclasses.dataclass(frozen=True)
 class TRF5PJePage(PJePage):
-    CPF_INPUT: str = dataclasses.field(default='fPP:dpDec:documentoParte')
-    PROCESS_NUMBER_INPUT: str = dataclasses.field(
-        default='fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso'
-    )
-    SEARCH_BUTTON: str = dataclasses.field(default='fPP:searchProcessos')
-    ERROR_MESSAGE: str = dataclasses.field(default='alert-danger')
-
-    PROCESS_TABLE: str = dataclasses.field(default='fPP:processosTable:tb')
-
     PROCESS_NUMBER: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id146')
     DISTRIBUTION_DATE: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id158')
     JUDICIAL_CLASS: str = dataclasses.field(default='j_id140:processoTrfViewView:j_id169')
@@ -244,4 +219,34 @@ class TRF5PJePage(PJePage):
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTab:tb')
     ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id140:j_id648:j_id649Input')
+
     DOWNLOAD_PDF_FILE: str = dataclasses.field(default='j_id39:downloadPDF')
+
+
+@dataclasses.dataclass(frozen=True)
+class TRF6PJePage(PJePage):
+    PROCESS_NUMBER: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id147')
+    DISTRIBUTION_DATE: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id159')
+    JUDICIAL_CLASS: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id170')
+    SUBJECT: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id181')
+    JURISDICTION: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id194')
+    COLLEGIATE_JUDGE_ENTITY: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id205')
+    JUDGE_ENTITY: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id218')
+    REFERENCED_PROCESS_NUMBER: str = dataclasses.field(default='j_id141:processoTrfViewView:j_id231')
+
+    ACTIVE_PARTY_TABLE_BODY: str = dataclasses.field(
+        default='j_id141:processoPartesPoloAtivoResumidoTableBinding:tb'
+    )
+    PASSIVE_PARTY_TABLE_BODY: str = dataclasses.field(
+        default='j_id141:processoPartesPoloPassivoResumidoTableBinding:tb'
+    )
+
+    MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoEventoPanel_body')
+    MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoEvento:tb')
+    MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id141:j_id545:j_id546Input')
+
+    ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTabPanel_body')
+    ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTab:tb')
+    ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id141:j_id648:j_id649Input')
+
+    DOWNLOAD_PDF_FILE: str = dataclasses.field(default='j_id47:downloadPDF')

@@ -4,7 +4,7 @@ from lib.exceptions import LibJusBrException
 from lib.log_utils import get_logger
 from lib.pje.action import PJeAction
 from lib.pje.constants import URLS
-from lib.pje.page import TRF1PJePage, TRF3PJePage, TRF5PJePage
+from lib.pje.page import TRF1PJePage, TRF3PJePage, TRF5PJePage, TRF6PJePage
 from lib.pje.types import Grade, TribunalPje
 from lib.webdriver.driver import CustomWebDriver
 from lib.webdriver.service import Service
@@ -71,4 +71,11 @@ def get_trf5_service(d: CustomWebDriver) -> PJeService:
     return PJeService(
         action=PJeAction(TRF5PJePage(driver=d)),
         tribunal='trf5'
+    )
+
+
+def get_trf6_service(d: CustomWebDriver) -> PJeService:
+    return PJeService(
+        action=PJeAction(TRF6PJePage(driver=d)),
+        tribunal='trf6'
     )

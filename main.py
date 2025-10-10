@@ -3,7 +3,7 @@ import json
 import logging
 
 from lib.json_utils import default_json_encoder
-from lib.pje.service import get_trf3_service, get_trf5_service
+from lib.pje.service import get_trf3_service, get_trf5_service, get_trf6_service
 from lib.webdriver.driver import new_driver
 
 logging.basicConfig(level=logging.INFO)
@@ -17,12 +17,15 @@ CPF_TRF3 = '06013333815'
 CPF_TRF5 = '032.778.684-19'
 PROCESS_NUMBER_TRF5 = '08042016320204058200'
 
+CPF_TRF6 = '009.983.386-72'
+PROCESS_NUMBER_TRF6 = '0052515-05.2014.4.01.3800'
+
 if __name__ == '__main__':
-    term = PROCESS_NUMBER_TRF5
+    term = PROCESS_NUMBER_TRF6
     with new_driver(
             headless=False
     ) as driver:
-        data = get_trf5_service(driver).get_detailed_process(
+        data = get_trf6_service(driver).get_detailed_process(
             term=term, grade='pje1g'
         )
 

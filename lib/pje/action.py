@@ -101,7 +101,7 @@ class PJeAction(Action[PJePage]):
         try:
             self.driver().wait_condition(_predicate, timeout=timeout)
         except TimeoutException:
-            raise LibJusBrException(f'A consulta está demorando mais do que o esperado, tente novamentes')
+            raise LibJusBrException(f'A consulta está demorando mais do que o esperado, tente novamente')
 
         error_message = self.page.error_message_text()
         if error_message:
