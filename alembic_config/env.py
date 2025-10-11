@@ -10,6 +10,7 @@ from db.models import (  # noqa: F401
     credit,
     document_party,
     group,
+    auth_user_groups,
     movement,
     party,
     process,

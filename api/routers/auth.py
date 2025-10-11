@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from starlette import status
 
 from core.security import create_access_token
 from crud.user import create_user, authenticate_user, get_user_by_username
@@ -16,14 +18,15 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     user = create_user(db, username=payload.username, email=str(payload.email), password=payload.password)
     return {"id": user.id, "username": user.username}
 
-
-@router.post("/token", response_model=Token)
-def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
-    # expecting {"username": "...", "password": "..."}
-    username = form_data.get("username")
-    password = form_data.get("password")
-    user = authenticate_user(db, username, password)
+@router.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
-    token, exp_ts = create_access_token(subject=user.id)
-    return {"access_token": token, "token_type": "bearer", "expires_at": str(exp_ts)}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token, exp = create_access_token(subject=user.id)
+    return {"access_token": token, "token_type": "bearer", "expires": exp}

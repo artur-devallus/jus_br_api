@@ -15,4 +15,4 @@ class Movement(Base):
     document_ref = Column(String(255), nullable=True)
     document_date = Column(DateTime(timezone=True), nullable=True)
 
-    process = relationship('Process', back_populates='juridical_movements')
+    process = relationship('Process', back_populates='movements')

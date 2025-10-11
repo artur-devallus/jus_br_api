@@ -13,5 +13,5 @@ class Party(Base):
     name = Column(String(255), nullable=False)
     role = Column(String(100), nullable=True)
 
-    process = relationship("Process", back_populates="juridical_parties")
-    documents = relationship("DocumentParty", back_populates="juridical_parties", cascade="all, delete-orphan")
+    process = relationship('Process', back_populates="parties")
+    documents = relationship("DocumentParty", back_populates="party", cascade="all, delete-orphan")

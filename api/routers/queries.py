@@ -1,4 +1,4 @@
-from tasks.celery_app import enqueue_crawls_for_query
+from tasks.crawler import enqueue_crawls_for_query
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 

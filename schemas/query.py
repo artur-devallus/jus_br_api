@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class QueryCreate(BaseModel):
     query_type: Literal["cpf", "processo"]
-    query_value: str = Field(max_length=20, min_length=20)
+    query_value: str = Field(min_length=11, max_length=20)
 
 
 class QueryOut(BaseModel):

@@ -16,4 +16,4 @@ class Attachment(Base):
     protocol_md5 = Column(String(64), nullable=True)
     protocol_b64 = Column(Text, nullable=True)
 
-    process = relationship('Process', back_populates='juridical_attachments')
+    process = relationship('Process', back_populates='attachments')

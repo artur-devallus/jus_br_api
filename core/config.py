@@ -1,8 +1,8 @@
-from pydantic.env_settings import BaseSettings, AnyUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: AnyUrl
+    DATABASE_URL: str
 
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str
@@ -12,9 +12,9 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    TWO_CAPTCHA_KEY: str
+
+    model_config = SettingsConfigDict(env_file='.env')
 
 
-settings = Settings()
+settings = Settings() # noqa

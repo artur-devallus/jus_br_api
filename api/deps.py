@@ -7,7 +7,7 @@ from core.security import decode_token
 from db.session import get_db
 from db.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:

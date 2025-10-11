@@ -25,4 +25,4 @@ class Query(Base):
     meta = Column(JSON, nullable=True)
 
     user = relationship("User")
-    processes = relationship("Process", back_populates="juridical_queries")
+    process = relationship('Process', back_populates="query")

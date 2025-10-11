@@ -9,20 +9,46 @@ from db.models.crawl_task_log import CrawlTaskLog
 from db.session import SessionLocal
 from lib.eproc.service import get_eproc_service
 from lib.exceptions import LibJusBrException
+from lib.log_utils import get_logger
 from lib.models import DetailedProcessData
 from lib.pje.service import get_pje_service_for_tribunal
 from lib.string_utils import only_digits
-from tasks.celery_app import celery
+from tasks.celery_app import celery, tribunal_queues
 from tasks.driver_singleton import get_driver_singleton_for
+
+log = get_logger(__name__)
+
+
+@celery.task(bind=True)
+def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: str):
+    log.info('Crawl for query %s with value %s', query_id, query_type)
+    tribunals = tribunal_queues if query_type == 'cpf' else [
+        determine_tribunal_from_process(query_value)
+    ]
+    for tr in tribunals:
+        crawl_for_tribunal.apply_async(args=[query_id, tr, query_value], queue=tr)
+        log.info('Applied ')
+
+
+def determine_tribunal_from_process(process_number: str) -> str:
+    process_number = only_digits(process_number)
+    if len(process_number) != 20:
+        raise RuntimeError(f"Process number {process_number} is not valid")
+    process_number = int(process_number[14:16])
+    if process_number < 1 or process_number > 6:
+        raise RuntimeError(f"Process number {process_number} is not valid")
+    return f"trf{process_number}"
 
 
 @celery.task(bind=True, max_retries=5, acks_late=True)
 def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
+    log.info(f'Received task with query id {query_id} tribunal {tribunal} and term_to_search {term_to_search}')
+
     db = SessionLocal()
-    log = CrawlTaskLog(tribunal=tribunal, status='started', attempts=0)
-    db.add(log)
+    crawl_task_log = CrawlTaskLog(tribunal=tribunal, status='started', attempts=0)
+    db.add(crawl_task_log)
     db.commit()
-    db.refresh(log)
+    db.refresh(crawl_task_log)
     try:
         driver = get_driver_singleton_for(tribunal)
         results = run_crawler(driver, tribunal, term_to_search)
@@ -37,15 +63,17 @@ def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
         count += len(results)
 
         update_query_status(db, query_id, QueryStatus.running, count)  # partial
-        log.status = 'done'
-        log.finished_at = datetime.now()
-        db.add(log)
+        crawl_task_log.status = 'done'
+        crawl_task_log.finished_at = datetime.now()
+        db.add(crawl_task_log)
         db.commit()
+        log.info(f'Crawl for {query_id} tribunal {tribunal} and term_to_search {term_to_search} completed successfully')
     except Exception as exc:
-        log.status = 'failed'
-        log.attempts = (log.attempts or 0) + 1
-        log.last_error = traceback.format_exc()
-        db.add(log)
+        log.error('Crawl task failed', exc_info=exc)
+        crawl_task_log.status = 'failed'
+        crawl_task_log.attempts = (crawl_task_log.attempts or 0) + 1
+        crawl_task_log.last_error = traceback.format_exc()
+        db.add(crawl_task_log)
         db.commit()
         raise self.retry(exc=exc, countdown=10 * (self.request.retries + 1))
     finally:
@@ -65,11 +93,11 @@ def _get_for_grade(term, grade, tribunal, driver):
                 all_processes.append(pje_service.get_detailed_process(
                     term=term, grade=grade, process_index_or_number=process.process_number,
                 ))
-            except LibJusBrException:
-                ...
+            except LibJusBrException as ex:
+                log.warning(ex.message)
 
-    except LibJusBrException:
-        ...
+    except LibJusBrException as ex:
+        log.warning(ex.message)
 
     return all_processes
 
@@ -86,10 +114,10 @@ def _get_for_eproc(term, grade, tribunal, driver):
                 all_processes.append(eproc_service.get_detailed_process(
                     term=term, grade=grade, process_index_or_number=process.process_number,
                 ))
-            except LibJusBrException:
-                ...
-    except LibJusBrException:
-        ...
+            except LibJusBrException as ex:
+                log.warning(ex.message)
+    except LibJusBrException as ex:
+        log.warning(ex.message)
 
     return all_processes
 

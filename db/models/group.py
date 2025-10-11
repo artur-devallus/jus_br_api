@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 
 from db.base import Base
 
-user_groups = Table(
+auth_user_groups = Table(
     'auth_user_groups', Base.metadata,
     Column('user_id', Integer, ForeignKey("auth_users.id", ondelete="CASCADE"), primary_key=True),
     Column('group_id', Integer, ForeignKey("auth_groups.id", ondelete="CASCADE"), primary_key=True)
@@ -14,4 +14,4 @@ class Group(Base):
     __tablename__ = 'auth_groups'
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
-    users = relationship('User', secondary=user_groups, back_populates='auth_groups')
+    users = relationship('User', secondary=auth_user_groups, back_populates='groups')
