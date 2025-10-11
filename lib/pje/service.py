@@ -79,3 +79,19 @@ def get_trf6_service(d: CustomWebDriver) -> PJeService:
         action=PJeAction(TRF6PJePage(driver=d)),
         tribunal='trf6'
     )
+
+
+def get_action_for_tribunal(tribunal: TribunalPje, driver):
+    if tribunal == 'trf1':
+        return PJeAction(TRF1PJePage(driver=driver))
+    elif tribunal == 'trf3':
+        return PJeAction(TRF3PJePage(driver=driver))
+    elif tribunal == 'trf5':
+        return PJeAction(TRF5PJePage(driver=driver))
+    elif tribunal == 'trf6':
+        return PJeAction(TRF6PJePage(driver=driver))
+    raise LibJusBrException(f'cannot get PJe Service for tribunal {tribunal}')
+
+
+def get_pje_service_for_tribunal(tribunal: TribunalPje, driver: CustomWebDriver) -> PJeService:
+    return PJeService(get_action_for_tribunal(tribunal=tribunal, driver=driver), tribunal)

@@ -1,41 +1,15 @@
-import dataclasses
-import json
-import logging
+from fastapi import FastAPI
 
-from lib.json_utils import default_json_encoder
-from lib.pje.service import get_trf3_service, get_trf5_service, get_trf6_service
-from lib.eproc.service import get_trf6_service
-from lib.webdriver.driver import new_driver
+from api.routers import auth as auth_router, users as users_router, queries as queries_router
 
-logging.basicConfig(level=logging.INFO)
+app = FastAPI(title="Jus BR API")
 
-NOT_FOUND_CPF = '02382814349'
+app.include_router(auth_router.router, prefix='/v1')
+app.include_router(users_router.router, prefix='/v1')
+app.include_router(queries_router.router, prefix='/v1')
 
-CPF_TRF1 = '37626361334'
-PROCESS_NUMBER_TRF1 = '0005141-10.2015.4.01.0000'
 
-PROCESS_NUMBER_TRF3 = '00035473620174036110'
-CPF_TRF3 = '06013333815'
-
-CPF_TRF5 = '032.778.684-19'
-PROCESS_NUMBER_TRF5 = '08042016320204058200'
-
-CPF_TRF6 = '009.983.386-72'
-PROCESS_NUMBER_TRF6 = '0052515-05.2014.4.01.3800'
-
-CPF_TRF2 = '001.286.587-70'
-PROCESS_NUMBER_TRF2 = '0004484-12.2013.4.02.0000'
-
-if __name__ == '__main__':
-    term = CPF_TRF6
-    with new_driver(
-            headless=False
-    ) as driver:
-        data = get_trf6_service(driver).get_process_list(
-            term=term, grade='eproc1g'
-        )
-
-        json_data = dataclasses.asdict(data)
-        logging.info(json.dumps(json_data, indent=2, default=default_json_encoder))
-        with open(f'pje_{term}.json', 'w') as f:
-            json.dump(json_data, f, indent=2, default=default_json_encoder)
+# health
+@app.get("/v1/health")
+def health():
+    return dict(status='ok')

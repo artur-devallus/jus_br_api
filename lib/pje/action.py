@@ -1,6 +1,4 @@
-import base64
 import dataclasses
-import os
 from typing import List
 
 from selenium.common import StaleElementReferenceException, TimeoutException
@@ -19,7 +17,7 @@ from lib.models import (
     Party,
     DocumentParty,
     Movement,
-    Attachment
+    Attachment, MovementAttachment
 )
 from lib.pje.constants import QUERY_TIMEOUT
 from lib.pje.page import PJePage
@@ -42,10 +40,6 @@ def _first_row_changed_predicate(driver, id_table, first_row_text):
         return False
 
 
-def _window_handles_gt_predicate(driver, expected_len):
-    return len(driver.window_handles) > expected_len
-
-
 @dataclasses.dataclass(frozen=True)
 class PJeAction(Action[PJePage]):
 
@@ -53,7 +47,7 @@ class PJeAction(Action[PJePage]):
         if 'Denied' in self.page.driver.title:
             raise LibJusBrException(f'Access denied for {self.page.driver.current_url}')
         self.page.query_process().click()
-        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 1))
+        self.driver().wait_windows_greather_than(1)
         self.page.close_current_window()
         return self
 
@@ -170,7 +164,7 @@ class PJeAction(Action[PJePage]):
             return DocumentParty.of_oab(doc.replace('OAB', '').strip())
         if only_digits_doc:
             raise LibJusBrException(f'cannot get document for {doc}')
-        return None
+        return DocumentParty.of_unknown(doc)
 
     @classmethod
     def _extract_parties(cls, elements):
@@ -216,10 +210,12 @@ class PJeAction(Action[PJePage]):
         return Movement(
             created_at=to_date_time(created_at),
             description=description,
-            document_date=to_date_time(
-                document_date
-            ) if document_date else None,
-            document_ref=document_ref,
+            attachments=[MovementAttachment(
+                document_date=to_date_time(
+                    document_date
+                ) if document_date else None,
+                document_ref=document_ref,
+            )] if document_ref else []
         )
 
     def _input_next(self, page_input):
@@ -252,25 +248,6 @@ class PJeAction(Action[PJePage]):
 
         return movements
 
-    def _read_file_remove_and_close(self):
-        def _wait_file_predicate(driver: CustomWebDriver):
-            return driver.downloads_quantity() > 0
-
-        self.page.driver.wait_condition(_wait_file_predicate)
-
-        file = os.path.join(self.page.driver.download_folder, os.listdir(self.page.driver.download_folder)[0])
-
-        log.info(f'downloaded file {file}')
-
-        with open(file, 'rb') as f:
-            file_b64 = base64.b64encode(f.read()).decode('utf-8')
-
-        os.remove(file)
-        log.info(f'removed file {file}')
-
-        self.page.close_current_window()
-        return file_b64
-
     def _is_downloadable_window(self, description):
         if 'login' in self.page.driver.current_url:
             log.warning(f'Document {description} needs login to be downloaded')
@@ -292,35 +269,37 @@ class PJeAction(Action[PJePage]):
         self.driver().scroll_to(row)
 
         anchor_tag.click()
-        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 2))
+        self.driver().wait_windows_greather_than(2)
         self.page.switch_window()
 
         file_b64 = None
+        file_md5 = None
         if self._is_downloadable_window(description):
             try:
                 self.page.download_pdf_file().click()
-                file_b64 = self._read_file_remove_and_close()
+                file_b64, file_md5 = self.read_file_remove_and_close()
             except TimeoutException:
                 # Sometimes the file is downloaded without the click (direct downloads)
                 if self.page.driver.downloads_quantity() == 0:
                     log.error(f'failed to download attachment {description}')
                     self.page.close_current_window()
                 else:
-                    file_b64 = self._read_file_remove_and_close()
+                    file_b64, file_md5 = self.read_file_remove_and_close()
         else:
             self.page.close_current_window()
 
         protocol_b64 = None
+        protocol_md5 = None
         row = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')[row_index]
         _, td2 = row.find_elements(By.TAG_NAME, 'td')
 
         if len(td2.find_elements(By.TAG_NAME, 'a')) > 0:
             td2.click()
-            self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 2))
+            self.driver().wait_windows_greather_than(2)
             self.page.switch_window()
 
             if self._is_downloadable_window(description):
-                protocol_b64 = self._read_file_remove_and_close()
+                protocol_b64, protocol_md5 = self.read_file_remove_and_close()
             else:
                 self.page.close_current_window()
 
@@ -329,6 +308,8 @@ class PJeAction(Action[PJePage]):
             description=description,
             file_b64=file_b64,
             protocol_b64=protocol_b64,
+            file_md5=file_md5,
+            protocol_md5=protocol_md5,
         )
 
     def _extract_attachments(self) -> List[Attachment]:
@@ -372,7 +353,7 @@ class PJeAction(Action[PJePage]):
 
         tds = row.find_elements(By.TAG_NAME, "td")
         tds[0].click()
-        self.page.driver.wait_condition(lambda x: _window_handles_gt_predicate(x, 1))
+        self.driver().wait_windows_greather_than(1)
 
         self.page.switch_window()
         detailed_data = DetailedProcessData(

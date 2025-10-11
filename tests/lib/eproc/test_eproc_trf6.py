@@ -1,5 +1,4 @@
 import dataclasses
-import datetime
 import json
 import unittest
 
@@ -16,7 +15,7 @@ class TestTrf6(unittest.TestCase):
     def tearDown(self):
         self.driver.quit()
 
-    def test_trf1_get_data_from_cpf_that_does_not_exists(self):
+    def test_trf6_get_data_from_cpf_that_does_not_exists(self):
         with self.assertRaises(LibJusBrException) as context:
             get_trf6_service(self.driver).get_process_list(
                 term='02382814349',
@@ -25,7 +24,7 @@ class TestTrf6(unittest.TestCase):
 
         self.assertEqual('Nenhum registro encontrado.', context.exception.message)
 
-    def test_trf1_get_simple_data_for_cpf_00998338672(self):
+    def test_trf6_get_simple_data_for_cpf_00998338672(self):
         process_list = get_trf6_service(self.driver).get_process_list(
             term='00998338672',
             grade='eproc1g',
@@ -43,7 +42,7 @@ class TestTrf6(unittest.TestCase):
         self.assertIsNone(process_list[0].process_class_abv)
         self.assertIsNone(process_list[0].status)
 
-    def test_trf1_get_detailed_data_for_cpf_00998338672(self):
+    def test_trf6_get_detailed_data_for_cpf_00998338672(self):
         detailed_data = get_trf6_service(self.driver).get_detailed_process(
             term='009.983.386-72',
             grade='eproc1g',

@@ -65,3 +65,12 @@ def get_trf6_service(d: CustomWebDriver) -> EprocService:
         action=EprocAction(EprocPage(driver=d)),
         tribunal='trf6'
     )
+
+
+def get_eproc_service(tribunal, driver: CustomWebDriver) -> EprocService:
+    if tribunal == 'trf2':
+        return get_trf2_service(driver)
+    elif tribunal == 'trf6':
+        return get_trf6_service(driver)
+    else:
+        raise LibJusBrException(f'unknown tribunal {tribunal}')

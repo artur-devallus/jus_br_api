@@ -20,6 +20,10 @@ from lib.webdriver.constants import (
 )
 
 
+def _window_handles_gt_predicate(driver, expected_len):
+    return len(driver.window_handles) > expected_len
+
+
 class CustomWebDriver(WebDriver):
     def __init__(self, options, service, download_folder, base_folder):
         super().__init__(options, service)
@@ -58,6 +62,9 @@ class CustomWebDriver(WebDriver):
     @classmethod
     def wait(cls, amount):
         time.sleep(amount)
+
+    def wait_windows_greather_than(self, windows_size):
+        return self.wait_condition(lambda x: _window_handles_gt_predicate(x, windows_size))
 
     def wait_condition(self, condition: Any, timeout: int = DEFAULT_TIMEOUT) -> WebElement:
         return WebDriverWait(self, timeout=timeout).until(condition)

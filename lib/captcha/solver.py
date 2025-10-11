@@ -18,3 +18,12 @@ def solve_image_captcha(img_b64_string):
     log.info(f'Solved Image: {img_b64_string}')
     log.info(f'Captcha Result: {code}')
     return code
+
+
+def solve_cloudflare_captcha(sitekey, url):
+    log.info('Solving cloudflare captcha')
+    result = solver.turnstile(sitekey=sitekey, url=url)
+    code = result.get('code')
+    log.info('Solved cloudflare captcha')
+    log.info(f'Captcha Result: {code}')
+    return code
