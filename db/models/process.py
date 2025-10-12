@@ -1,6 +1,7 @@
 import enum
 
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, Date, Enum
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Date, Enum
+from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import relationship
 
 from db.base import Base
@@ -17,15 +18,17 @@ class Tribunal(str, enum.Enum):
 
 class Process(Base):
     __tablename__ = 'juridical_processes'
-    id = Column(Integer, primary_key=True)
-    query_id = Column(Integer, ForeignKey('juridical_queries.id', ondelete="CASCADE"), index=True)
+    id = Column(BigInteger, primary_key=True)
+    query_id = Column(BigInteger, ForeignKey('juridical_queries.id', ondelete="CASCADE"), index=True)
+    crawl_task_log_id = Column(BigInteger, ForeignKey('crawl_tasks_log.id', ondelete="CASCADE"), index=True)
     tribunal = Column(Enum(Tribunal))
     process_number = Column(String(20), nullable=False, index=True)
     last_crawl_at = Column(DateTime(timezone=True))
-    raw_json = Column(JSON, nullable=True)  # armazenar objeto completo
+    raw_json = Column(LONGBLOB, nullable=True)
     distribution_date = Column(Date, nullable=True)
 
     query = relationship('Query', back_populates='process')
     movements = relationship('Movement', back_populates='process', cascade='all, delete-orphan')
     attachments = relationship('Attachment', back_populates='process', cascade='all, delete-orphan')
     parties = relationship('Party', back_populates="process", cascade="all, delete-orphan")
+    crawl_task_log = relationship('CrawlTaskLog', back_populates='processes')

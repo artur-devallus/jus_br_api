@@ -1,0 +1,50 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: jusbr-redis
+    restart: always
+
+  backend:
+    build: .
+    container_name: jusbr-backend
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    restart: always
+
+  celery:
+    build: .
+    container_name: jusbr-celery
+    env_file:
+      - .env
+    command: ["./celery.sh"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+      - redis
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: jusbr-frontend
+    env_file:
+      - .env
+    ports:
+      - "8081:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+    restart: always

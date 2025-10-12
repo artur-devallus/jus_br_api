@@ -1,13 +1,14 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
+from sqlalchemy import Column, String, Boolean, DateTime, func, BigInteger
 from sqlalchemy.orm import relationship
-from db.models.group import auth_user_groups
+
 from db.base import Base
+from db.models.group import auth_user_groups
 
 
 class User(Base):
     __tablename__ = "auth_users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     username = Column(String(150), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
