@@ -15,7 +15,7 @@ export default defineConfig(({command}) => ({
     emptyOutDir: true,
     chunkSizeWarningLimit: 2000
   },
-  base: command === 'serve' ? '/' : '/',
+  base: command === 'serve' ? '/' : '/jusbr/',
   // Adiciona path aliases
   resolve: {
     alias: {
