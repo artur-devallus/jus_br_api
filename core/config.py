@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     TWO_CAPTCHA_KEY: str
+    CHROME_BINARY: str | None = None
+    CHROMEDRIVER_PATH: str | None = None
 
     model_config = SettingsConfigDict(env_file='.env')
 
