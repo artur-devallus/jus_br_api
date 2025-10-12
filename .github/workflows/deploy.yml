@@ -30,6 +30,8 @@ jobs:
             CELERY_BROKER_URL="redis://redis:6379/0"
             CELERY_RESULT_BACKEND="redis://redis:6379/0"
             TWO_CAPTCHA_KEY=${{secrets.TWO_CAPTCHA_KEY}}
+            CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+            CHROME_BINARY=/usr/local/bin/google-chrome
             EOF
             
             docker compose build && docker compose up -d
