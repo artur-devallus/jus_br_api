@@ -15,7 +15,7 @@ export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
           <Button
             variant="ghost"
             className="justify-start gap-2"
-            onClick={() => onNavigate?.("/app/consultas")}
+            onClick={() => onNavigate?.("/app")}
           >
             <Search size={18}/>
             Consultas

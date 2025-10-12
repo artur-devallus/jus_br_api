@@ -7,7 +7,7 @@ app = FastAPI(title="Jus BR API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        'http://151.243.218.157',
+        'http://151.243.218.157:8081',
         'http://127.0.0.1:5173',
         'http://localhost:5173',
     ],
