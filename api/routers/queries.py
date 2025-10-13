@@ -68,3 +68,21 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
             raw_json=gzip.decompress(p.raw_json).decode("utf-8"),
         ) for p in q.process]
     )
+
+
+@router.post("/{query_id}/enqueue", response_model=QueryDetailedOut)
+def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    q = db.query(QueryModel).get(query_id)
+    if not q:
+        raise HTTPException(404, "Not found")
+    if q.user_id != user.id and "admin" not in [g.name for g in user.groups]:
+        raise HTTPException(403, "Forbidden")
+    enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+    return QueryOut(
+        id=q.id,
+        query_type=q.query_type,
+        query_value=q.query_value,
+        status=q.status,
+        result_process_count=q.result_process_count,
+        processes=[]
+    )
