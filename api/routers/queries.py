@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
-from crud.query import create_query, get_query_by_term
-from db.models.query import Query as QueryModel, Query
+from crud.query import create_query, get_query_by_term, update_query_status
+from db.models.query import Query as QueryModel, Query, QueryStatus
 from db.session import get_db
 from schemas.query import QueryCreate, QueryOut, SimpleProcess, QueryDetailedOut, DetailedProcess
 from tasks.crawler import enqueue_crawls_for_query
@@ -77,6 +77,7 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
         raise HTTPException(404, "Not found")
     if q.user_id != user.id and "admin" not in [g.name for g in user.groups]:
         raise HTTPException(403, "Forbidden")
+    update_query_status(db, q.id, QueryStatus.queued)
     enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
     return QueryOut(
         id=q.id,
