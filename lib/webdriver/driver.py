@@ -240,6 +240,7 @@ def new_driver(
     options.add_argument('--no-sandbox')
     if proxy:
         options.add_argument(f'--proxy-server={proxy_server}')
+
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-extensions')
     options.add_argument('--window-size=1366,768')
