@@ -19,16 +19,26 @@ services:
     depends_on:
       - redis
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   celery:
     build: .
     container_name: jusbr-celery
     env_file:
       - .env
-    command: ["./celery.sh"]
+    command: [ "./celery.sh" ]
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+    deploy:
+      resources:
+        limits:
+          memory: 2048m
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
