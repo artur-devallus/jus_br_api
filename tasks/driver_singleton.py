@@ -3,13 +3,11 @@ import threading
 from lib.webdriver.driver import new_driver
 
 _lock = threading.Lock()
-_drivers = {}
+_drivers = {
+    'default': new_driver()
+}
 
 
-def get_driver_singleton_for(tribunal: str):
+def get_driver_singleton():
     with _lock:
-        if tribunal in _drivers:
-            return _drivers[tribunal]
-        driver = new_driver()
-        _drivers[tribunal] = driver
-        return driver
+        return _drivers['default']

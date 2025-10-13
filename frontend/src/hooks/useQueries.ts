@@ -7,9 +7,10 @@ export const useCreateQuery = () => {
   return useMutation({
     mutationFn: async (data: {
       term: string;
+      enqueue?: boolean
     }): Promise<Query> => {
       const cleaned = data.term.replace(/\D/g, "");
-      return api.post("/v1/queries", {term: cleaned}).then((res) => new QueryImpl(res.data));
+      return api.post("/v1/queries", {term: cleaned, enqueue: data.enqueue}).then((res) => new QueryImpl(res.data));
     }
   });
 };

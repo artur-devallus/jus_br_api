@@ -15,20 +15,21 @@ from lib.log_utils import get_logger
 from lib.models import DetailedProcessData
 from lib.pje.service import get_pje_service_for_tribunal
 from lib.string_utils import only_digits
-from tasks.celery_app import celery, tribunal_queues
-from tasks.driver_singleton import get_driver_singleton_for
+from tasks.celery_app import celery, tribunal_queue
+from tasks.driver_singleton import get_driver_singleton
 
 log = get_logger(__name__)
+all_tribunals = ['trf1', 'trf2', 'trf3', 'trf4', 'trf5', 'trf6']
 
 
 @celery.task(bind=True)
 def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: str):
     log.info('Crawl for query %s with value %s', query_id, query_type)
-    tribunals = tribunal_queues if query_type == 'cpf' else [
+    tribunals = all_tribunals if query_type == 'cpf' else [
         determine_tribunal_from_process(query_value)
     ]
 
-    tasks = [crawl_for_tribunal.s(query_id, tr, query_value).set(queue=tr) for tr in tribunals]
+    tasks = [crawl_for_tribunal.s(query_id, tr, query_value).set(queue=tribunal_queue) for tr in tribunals]
 
     chord(tasks)(finalize_query.s(query_id))
 
@@ -72,7 +73,7 @@ def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
     db.commit()
     db.refresh(crawl_task_log)
     try:
-        driver = get_driver_singleton_for(tribunal)
+        driver = get_driver_singleton()
         results = run_crawler(driver, tribunal, term_to_search)
         count = 0
         process = None
@@ -122,6 +123,7 @@ def all_crawls_finished(db, query_id):
 def _get_for_grade(term, grade, tribunal, driver):
     all_processes = []
     try:
+        log.info(f'running for {tribunal} {grade}')
         pje_service = get_pje_service_for_tribunal(tribunal=tribunal, driver=driver)
         process_list = pje_service.get_process_list(
             term=term, grade=grade
@@ -144,6 +146,7 @@ def _get_for_grade(term, grade, tribunal, driver):
 def _get_for_eproc(term, grade, tribunal, driver):
     all_processes = []
     try:
+        log.info(f'running for {tribunal} {grade}')
         eproc_service = get_eproc_service(tribunal=tribunal, driver=driver)
         process_list = eproc_service.get_process_list(
             term=term, grade=grade

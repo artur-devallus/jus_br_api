@@ -1,6 +1,6 @@
 import {onlyDigits} from "@/lib/format-utils.ts";
 
-export type QueryStatus = 'running' | 'done';
+export type QueryStatus = 'queued' | 'running' | 'done' | 'failed';
 export type QueryType = 'cpf' | 'process';
 export type LiteralDocumentType = 'cpf' | 'oab' | 'cnpj' | 'unknown';
 

@@ -1,52 +1,92 @@
 import gzip
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
 from crud.query import create_query, get_query_by_term, update_query_status
-from db.models.query import Query as QueryModel, Query, QueryStatus
+from db.models.query import Query as QueryModel, QueryStatus
 from db.session import get_db
-from schemas.query import QueryCreate, QueryOut, SimpleProcess, QueryDetailedOut, DetailedProcess
+from schemas.query import (
+    QueryCreate,
+    QueryOut,
+    SimpleProcess,
+    QueryDetailedOut,
+    DetailedProcess,
+)
 from tasks.crawler import enqueue_crawls_for_query
 
-router = APIRouter(prefix="/queries", tags=["queries"])
+router = APIRouter(prefix="/queries", tags=["Queries"])
 
 
-@router.post("/", response_model=QueryOut)
-def create_query_endpoint(payload: QueryCreate, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def _authorize_query(query: QueryModel, user):
+    if query.user_id != user.id and "admin" not in [g.name for g in user.groups]:
+        raise HTTPException(403, "Forbidden")
+
+
+def _decompress_raw_json(raw_json: bytes | None) -> str | None:
+    if not raw_json:
+        return None
+    try:
+        return gzip.decompress(raw_json).decode("utf-8")
+    except (RuntimeError, Exception):
+        return None
+
+
+@router.get("", response_model=list[QueryOut])
+def list_queries(
+        user=Depends(get_current_user),
+        db: Session = Depends(get_db),
+        page: int = QueryParam(1, ge=1),
+        size: int = QueryParam(20, ge=1, le=100),
+):
+    query = db.query(QueryModel).order_by(QueryModel.created_at.desc())
+
+    # Restrição: usuário comum só vê as próprias queries
+    if "admin" not in [g.name for g in user.groups]:
+        query = query.filter(QueryModel.user_id == user.id)
+
+    results = query.offset((page - 1) * size).limit(size).all()
+
+    return [
+        QueryOut.model_validate(q) for q in results
+    ]
+
+
+@router.post("", response_model=QueryOut)
+def create_query_endpoint(
+        payload: QueryCreate, user=Depends(get_current_user), db: Session = Depends(get_db)
+):
     existing = get_query_by_term(db, str(payload.term))
+
     if existing:
         q = existing
+        if q.status != QueryStatus.done and payload.enqueue:
+            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+            update_query_status(db, q.id, QueryStatus.queued)
     else:
         q = create_query(db, user.id, payload.term)
-        enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
-    return QueryOut(
-        id=q.id,
-        query_type=q.query_type,
-        query_value=q.query_value,
-        status=q.status,
-        result_process_count=q.result_process_count,
-        processes=[]
-    )
+        if payload.enqueue:
+            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+
+    return QueryOut.model_validate(q)
 
 
 @router.get("/{query_id}", response_model=QueryOut)
 def get_query(query_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    q: Query = db.query(QueryModel).get(query_id)
+    q = db.query(QueryModel).get(query_id)
     if not q:
         raise HTTPException(404, "Not found")
-    if q.user_id != user.id and "admin" not in [g.name for g in user.groups]:
-        raise HTTPException(403, "Forbidden")
+
+    _authorize_query(q, user)
+
     return QueryOut(
         id=q.id,
         query_type=q.query_type,
         query_value=q.query_value,
         status=q.status,
         result_process_count=q.result_process_count,
-        processes=[SimpleProcess(
-            process_number=p.process_number,
-        ) for p in q.process]
+        processes=[SimpleProcess(process_number=p.process_number) for p in q.process],
     )
 
 
@@ -55,35 +95,34 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
     q = db.query(QueryModel).get(query_id)
     if not q:
         raise HTTPException(404, "Not found")
-    if q.user_id != user.id and "admin" not in [g.name for g in user.groups]:
-        raise HTTPException(403, "Forbidden")
+
+    _authorize_query(q, user)
+
     return QueryDetailedOut(
         id=q.id,
         query_type=q.query_type,
         query_value=q.query_value,
         status=q.status,
         result_process_count=q.result_process_count,
-        processes=[DetailedProcess(
-            process_number=p.process_number,
-            raw_json=gzip.decompress(p.raw_json).decode("utf-8"),
-        ) for p in q.process]
+        processes=[
+            DetailedProcess(
+                process_number=p.process_number,
+                raw_json=_decompress_raw_json(p.raw_json),
+            )
+            for p in q.process
+        ],
     )
 
 
-@router.post("/{query_id}/enqueue", response_model=QueryDetailedOut)
-def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
+@router.post("/{query_id}/enqueue", response_model=QueryOut)
+def enqueue_query(query_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
     q = db.query(QueryModel).get(query_id)
     if not q:
         raise HTTPException(404, "Not found")
-    if q.user_id != user.id and "admin" not in [g.name for g in user.groups]:
-        raise HTTPException(403, "Forbidden")
+
+    _authorize_query(q, user)
+
     update_query_status(db, q.id, QueryStatus.queued)
     enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
-    return QueryOut(
-        id=q.id,
-        query_type=q.query_type,
-        query_value=q.query_value,
-        status=q.status,
-        result_process_count=q.result_process_count,
-        processes=[]
-    )
+
+    return QueryOut.model_validate(q)

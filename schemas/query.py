@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class QueryCreate(BaseModel):
-    term: str = Field(min_length=11, max_length=20)
+    term: str = Field(min_length=11, max_length=25)
+    enqueue: bool = Field(default=False)
 
 
 class SimpleProcess(BaseModel):
@@ -17,12 +18,14 @@ class QueryOut(BaseModel):
     query_value: str
     status: str
     result_process_count: int
-    processes: List[SimpleProcess]
+    processes: List[SimpleProcess] = []
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DetailedProcess(BaseModel):
     process_number: str
-    raw_json: str
+    raw_json: Optional[str] = None
 
 
 class QueryDetailedOut(BaseModel):
@@ -32,3 +35,5 @@ class QueryDetailedOut(BaseModel):
     status: str
     result_process_count: int
     processes: List[DetailedProcess]
+
+    model_config = ConfigDict(from_attributes=True)

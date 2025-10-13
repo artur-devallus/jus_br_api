@@ -15,9 +15,8 @@ celery = Celery(
 )
 
 main_queue = 'main'
-tribunal_queues = ['trf1', 'trf2', 'trf3', 'trf4', 'trf5', 'trf6']
-
-celery.conf.task_queues = list(map(Queue, tribunal_queues + [main_queue]))
+tribunal_queue = 'trf'
+celery.conf.task_queues = list(map(Queue, [tribunal_queue, main_queue]))
 celery.conf.task_default_queue = "main_queue"
 celery.conf.task_routes = {
     "tasks.crawler.crawl_for_tribunal": dict(queue=None),
