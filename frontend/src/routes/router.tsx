@@ -6,6 +6,7 @@ import MaintenancePage from "@/pages/Maintenance.tsx";
 import NotFoundPage from "@/pages/NotFoundPage.tsx";
 import Layout from "@/components/layout/layout";
 import ConsultasPage from "@/pages/ConsultasPage.tsx";
+import {ImportPage} from "@/pages/ImportPage.tsx";
 
 
 export const router = createBrowserRouter([
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
         index: true,
         path: "",
         element: <ConsultasPage/>
+      },
+      {
+        path: "import-file",
+        element: <ImportPage/>
       },
     ]
   },

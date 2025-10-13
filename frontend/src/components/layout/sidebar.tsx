@@ -1,4 +1,4 @@
-import {Search, LogOut} from "lucide-react";
+import {Search, LogOut, Import} from "lucide-react";
 import {Button} from "@/components/ui/button";
 
 interface SidebarProps {
@@ -10,7 +10,7 @@ export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
   return (
     <aside className="w-64 h-screen bg-white border-r flex flex-col justify-between">
       <div>
-        <div className="p-6 text-2xl font-semibold border-b">Jus BR</div>
+        <div className="p-6 text-2xl font-semibold border-b">Gugas ADV</div>
         <nav className="mt-4 flex flex-col gap-1 px-3">
           <Button
             variant="ghost"
@@ -20,9 +20,18 @@ export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
             <Search size={18}/>
             Consultas
           </Button>
+          
+          <Button
+            variant="ghost"
+            className="justify-start gap-2"
+            onClick={() => onNavigate?.("/app/import-file")}
+          >
+            <Import size={18}/>
+            Importar Arquivo
+          </Button>
         </nav>
       </div>
-
+      
       <div className="p-3 border-t">
         <Button
           variant="ghost"

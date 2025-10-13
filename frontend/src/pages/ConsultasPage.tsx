@@ -11,6 +11,7 @@ import {DetailedProcess, Query} from "@/models/query.ts";
 import {ErrorUtils} from "@/lib/errorUtils.ts";
 import {cn} from "@/lib/utils.ts";
 import {Loader2, Search} from "lucide-react";
+import {formatCpfOrProcess} from "@/lib/format-utils.ts";
 
 const schema = z.object({
   term: z.string().min(11, "Digite um CPF ou número de processo válido"),
@@ -30,23 +31,6 @@ export default function ConsultasPage() {
 
   const {data: details, isFetching} = useQueryDetail(query);
 
-  const handleMask = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    if (digits.length <= 11) {
-      // CPF
-      return digits
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1-$2")
-        .slice(0, 14);
-    }
-    // Processo
-    return digits
-      .replace(/^(\d{7})(\d)/, "$1-$2")
-      .replace(/^(\d{7}-\d{2})(\d{4})(\d)/, "$1.$2.$3")
-      .replace(/^(\d{7}-\d{2}\.\d{4}\.\d)(\d{2})(\d{4}).*/, "$1.$2.$3")
-      .slice(0, 25);
-  };
 
   const onSubmit = (data: FormValues) => {
     startQuery(data, {
@@ -69,7 +53,7 @@ export default function ConsultasPage() {
             {...form.register("term")}
             placeholder="CPF ou Número do processo"
             value={form.watch("term")}
-            onChange={(e) => form.setValue("term", handleMask(e.target.value))}
+            onChange={(e) => form.setValue("term", formatCpfOrProcess(e.target.value))}
             className={cn(
               "h-12 pl-5 pr-12 text-lg border border-gray-300 focus-visible:ring-0 focus:border-primary rounded-lg"
             )}

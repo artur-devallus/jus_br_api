@@ -26,3 +26,31 @@ export const useQueryDetail = (query: Query | null) => {
       query?.status === "running" ? 5000 : false,
   });
 }
+
+export async function runWithConcurrency<T, R>(
+  items: T[],
+  worker: (item: T) => Promise<R>,
+  concurrency = 5,
+) {
+  const results: R[] = [];
+  const queue = items.slice();
+  const runners: Promise<void>[] = [];
+  
+  async function next() {
+    const item = queue.shift();
+    if (!item) return;
+    try {
+      const r = await worker(item);
+      results.push(r);
+    } catch (e) {
+      results.push(e as unknown as R);
+    }
+    await next();
+  }
+  
+  for (let i = 0; i < Math.min(concurrency, items.length); i++) {
+    runners.push(next());
+  }
+  await Promise.all(runners);
+  return results;
+}
