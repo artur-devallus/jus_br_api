@@ -109,10 +109,12 @@ const asSimple = async (
   wsData.push([
     "Número do Processo",
     "Tribunal",
+    "Data de distribuição",
     "Autor",
     "Advogado",
-    "Defensor",
+    "Reu",
     "Assunto",
+    'Primeira movimentação',
   ]);
   
   for (const q of allQueries) {
@@ -124,10 +126,12 @@ const asSimple = async (
       wsData.push([
         p.process_number,
         proc.tribunal() || "-",
+        proc.distributionDate(),
         `${proc.activePartyAuthorName()} - ${proc.activePartyAuthorCpf()}`,
         `${proc.activePartyLawyerName()} - ${proc.activePartyLawyerCpf()}`,
         `${proc.passivePartyDefendantName()} - ${proc.passivePartyDefendantCpfOrCnpj()}`,
         proc.subject() || "-",
+        proc.firstMovement() + ' / ' + proc.firstMovementAt(),
       ]);
     }
   }
@@ -139,6 +143,8 @@ const asSimple = async (
     {wch: 50},
     {wch: 50},
     {wch: 50},
+    {wch: 50},
+    {wch: 65},
     {wch: 65},
   ];
   

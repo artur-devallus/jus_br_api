@@ -68,6 +68,8 @@ export interface DetailedProcess {
   
   tribunal(): string;
   
+  distributionDate(): string;
+  
   activePartyAuthorCpf(): string;
   
   activePartyAuthorName(): string;
@@ -77,6 +79,10 @@ export interface DetailedProcess {
   activePartyLawyerName(): string;
   
   passivePartyDefendantCpfOrCnpj(): string;
+  
+  firstMovement(): string;
+  
+  firstMovementAt(): string;
   
   passivePartyDefendantName(): string;
   
@@ -103,6 +109,10 @@ export class DetailedProcessImpl implements DetailedProcess {
   
   tribunal(): string {
     return `TRF${parseInt(onlyDigits(this.process_number).substring(14, 16))}`;
+  }
+  
+  distributionDate(): string {
+    return this._parsed.process.distribution_date ? new Date(this._parsed.process.distribution_date).toLocaleString("pt-BR") : '-';
   }
   
   subject(): string {
@@ -151,6 +161,14 @@ export class DetailedProcessImpl implements DetailedProcess {
     const cpf = this.findCpf(this.passivePartyDefendant());
     const cnpj = this.findCnpj(this.passivePartyDefendant());
     return cpf ? cpf.value : cnpj ? cnpj.value : 'XXX.XXX.XXX-XX';
+  }
+  
+  firstMovement(): string {
+    return this._parsed.movements && this._parsed.movements.length ? this._parsed.movements[this._parsed.movements.length - 1].description : '-';
+  }
+  
+  firstMovementAt(): string {
+    return this._parsed.movements && this._parsed.movements.length && this._parsed.movements[this._parsed.movements.length - 1].created_at ? new Date(this._parsed.movements[this._parsed.movements.length - 1].created_at).toLocaleString('pt-BR') : '-';
   }
   
   passivePartyDefendantName(): string {
