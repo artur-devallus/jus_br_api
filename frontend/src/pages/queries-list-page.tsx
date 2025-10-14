@@ -72,7 +72,7 @@ export default function QueriesListPage() {
   }
 
   async function exportOne(p: Query) {
-    await exportAllProcessesToExcel([p.id], detail, `processo_${p.query_value}.xlsx`);
+    await exportAllProcessesToExcel([p.id], detail, `processo_${p.query_value}.xlsx`, 'detailed');
   }
 
   const displayStatus = (r: Query) => {

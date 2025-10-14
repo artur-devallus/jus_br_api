@@ -1,28 +1,23 @@
 import * as XLSX from "xlsx";
 import {DetailedProcess} from "@/models/query.ts";
 
-/**
- * Exporta todos os processos detalhados (de todas as queries) para um único Excel.
- * Cada aba é um processo identificado por: {CPF} - {Número do processo}.
- */
-export async function exportAllProcessesToExcel(
+
+const asDetailed = async (
+  wb: XLSX.WorkBook,
   allQueries: number[],
   fetchDetailed: (id: number) => Promise<DetailedProcess[]>,
-  fileName?: string,
-) {
-  const wb = XLSX.utils.book_new();
-
+) => {
   for (const q of allQueries) {
     const processes = await fetchDetailed(q);
-
+    
     for (const proc of processes) {
       const wsData: (string | null)[][] = [];
-
+      
       const p = proc.process().process;
       const parties = proc.process().case_parties;
       const movements = proc.process().movements;
       const attachments = proc.process().attachments;
-
+      
       // Cabeçalho principal
       wsData.push([""]);
       wsData.push(["📄 DADOS DO PROCESSO"]);
@@ -38,7 +33,7 @@ export async function exportAllProcessesToExcel(
       wsData.push(["Data de Distribuição", formatDate(p.distribution_date)]);
       wsData.push(["Juridição", p.jurisdiction || "-"]);
       wsData.push([]);
-
+      
       // Partes ativas
       wsData.push(["⚖️ PARTES ATIVAS"]);
       wsData.push(["────────────────────────────"]);
@@ -50,7 +45,7 @@ export async function exportAllProcessesToExcel(
         );
         wsData.push([]);
       });
-
+      
       // Partes passivas
       wsData.push(["⚖️ PARTES PASSIVAS"]);
       wsData.push(["────────────────────────────"]);
@@ -62,7 +57,7 @@ export async function exportAllProcessesToExcel(
         );
         wsData.push([]);
       });
-
+      
       // Movimentações
       wsData.push(["📜 MOVIMENTAÇÕES"]);
       wsData.push(["────────────────────────────"]);
@@ -81,7 +76,7 @@ export async function exportAllProcessesToExcel(
         }
         wsData.push([]);
       });
-
+      
       // Anexos gerais
       wsData.push(["📎 ANEXOS GERAIS"]);
       wsData.push(["────────────────────────────"]);
@@ -94,21 +89,84 @@ export async function exportAllProcessesToExcel(
           a.protocol_md5 || "-",
         ]);
       });
-
+      
       // Definição da planilha
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws["!cols"] = [{wch: 45}, {wch: 55}, {wch: 25}, {wch: 25}];
-
-      const sheetName = sanitizeSheetName(`${proc.cpf()} - ${p.process_number}`);
+      
+      const sheetName = sanitizeSheetName(`${proc.activePartyAuthorCpf()} - ${p.process_number}`);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
   }
+}
+const asSimple = async (
+  wb: XLSX.WorkBook,
+  allQueries: number[],
+  fetchDetailed: (id: number) => Promise<DetailedProcess[]>
+) => {
+  const wsData: (string | null)[][] = [];
+  
+  wsData.push([
+    "Número do Processo",
+    "Tribunal",
+    "Autor",
+    "Advogado",
+    "Defensor",
+    "Assunto",
+  ]);
+  
+  for (const q of allQueries) {
+    const processes = await fetchDetailed(q);
+    
+    for (const proc of processes) {
+      const p = proc.process().process;
+      
+      wsData.push([
+        p.process_number,
+        proc.tribunal() || "-",
+        `${proc.activePartyAuthorName()} - ${proc.activePartyAuthorCpf()}`,
+        `${proc.activePartyLawyerName()} - ${proc.activePartyLawyerCpf()}`,
+        `${proc.passivePartyDefendantName()} - ${proc.passivePartyDefendantCpfOrCnpj()}`,
+        proc.subject() || "-",
+      ]);
+    }
+  }
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws["!cols"] = [
+    {wch: 40},
+    {wch: 25},
+    {wch: 50},
+    {wch: 50},
+    {wch: 50},
+    {wch: 65},
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, ws, "Processos");
+};
 
+/**
+ * Exporta todos os processos detalhados (de todas as queries) para um único Excel.
+ * Cada aba é um processo identificado por: {CPF} - {Número do processo}.
+ */
+export async function exportAllProcessesToExcel(
+  allQueries: number[],
+  fetchDetailed: (id: number) => Promise<DetailedProcess[]>,
+  fileName?: string,
+  mode: 'single' | 'detailed' = 'single'
+) {
+  const wb = XLSX.utils.book_new();
+  if (mode === 'detailed') {
+    await asDetailed(wb, allQueries, fetchDetailed);
+  } else {
+    await asSimple(wb, allQueries, fetchDetailed);
+  }
+  
   const wbout = XLSX.write(wb, {bookType: "xlsx", type: "array"});
   const blob = new Blob([wbout], {type: "application/octet-stream"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = fileName || "processos_detalhados.xlsx";
+  link.download = fileName || 'processos.xlsx';
   link.click();
 }
 

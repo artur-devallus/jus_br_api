@@ -34,8 +34,8 @@ export function ProcessCard({process}: ProcessCardProps) {
       <CardContent className="text-sm text-gray-700 space-y-2 pt-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
           <p><strong>Tribunal:</strong> {process.tribunal()}</p>
-          <p><strong>CPF:</strong> {process.cpf()}</p>
-          <p><strong>Nome:</strong> {process.name()}</p>
+          <p><strong>CPF:</strong> {process.activePartyAuthorCpf()}</p>
+          <p><strong>Nome:</strong> {process.activePartyAuthorName()}</p>
           <p><strong>Assunto:</strong> {proc.subject || "-"}</p>
         </div>
 
