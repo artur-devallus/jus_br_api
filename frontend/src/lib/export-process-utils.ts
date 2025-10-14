@@ -7,7 +7,8 @@ import {DetailedProcess} from "@/models/query.ts";
  */
 export async function exportAllProcessesToExcel(
   allQueries: number[],
-  fetchDetailed: (id: number) => Promise<DetailedProcess[]>
+  fetchDetailed: (id: number) => Promise<DetailedProcess[]>,
+  fileName?: string,
 ) {
   const wb = XLSX.utils.book_new();
 
@@ -107,7 +108,7 @@ export async function exportAllProcessesToExcel(
   const blob = new Blob([wbout], {type: "application/octet-stream"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "processos_detalhados.xlsx";
+  link.download = fileName || "processos_detalhados.xlsx";
   link.click();
 }
 

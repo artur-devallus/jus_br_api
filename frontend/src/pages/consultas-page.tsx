@@ -1,4 +1,5 @@
-import {useState} from "react";
+import {useCallback, useEffect, useState} from "react";
+import {useSearchParams} from "react-router-dom";
 import {useForm} from "react-hook-form";
 import {z} from "zod";
 import {zodResolver} from "@hookform/resolvers/zod";
@@ -21,6 +22,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function ConsultasPage() {
   const [query, setQuery] = useState<Query | null>(null);
+  const [initialSearchTerm, setInitialSearchTerm] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -29,41 +31,63 @@ export default function ConsultasPage() {
 
   const {mutate: startQuery, isPending: isStarting} = useCreateQuery();
   const {data: details, isFetching} = useQueryDetail(query);
+  const [searchParams] = useSearchParams();
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = useCallback((data: FormValues) => {
     startQuery(data, {
       onSuccess: (res) => setQuery(res),
       onError: (err) => ErrorUtils.displayAxiosError(err),
     });
-  };
+  }, [startQuery]);
+
+  useEffect(() => {
+    const urlTerm = searchParams.get("query_value");
+    if (urlTerm && !form.watch("term")) {
+      const formatted = formatCpfOrProcess(urlTerm);
+      form.setValue("term", formatted);
+      setInitialSearchTerm(formatted); // Guardar para disparar query
+    }
+  }, [searchParams, form]);
+
+  useEffect(() => {
+    if (initialSearchTerm) {
+      startQuery({term: initialSearchTerm}, {
+        onSuccess: (res) => {
+          setQuery(res);
+        },
+        onError: (err) => ErrorUtils.displayAxiosError(err),
+      });
+      setInitialSearchTerm(null);
+    }
+  }, [initialSearchTerm, startQuery]);
 
   const getStatusDisplay = (status?: string) => {
     switch (status) {
       case "queued":
         return (
           <div className="flex items-center gap-2 text-amber-500">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-4 w-4"/>
             <span className="text-sm font-medium">Na fila</span>
           </div>
         );
       case "running":
         return (
           <div className="flex items-center gap-2 text-blue-500 animate-pulse">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin"/>
             <span className="text-sm font-medium">Consultando tribunais...</span>
           </div>
         );
       case "failed":
         return (
           <div className="flex items-center gap-2 text-red-500">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className="h-4 w-4"/>
             <span className="text-sm font-medium">Erro na consulta</span>
           </div>
         );
       case "done":
         return (
           <div className="flex items-center gap-2 text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" />
+            <CheckCircle2 className="h-4 w-4"/>
             <span className="text-sm font-medium">Consulta concluída</span>
           </div>
         );
@@ -98,41 +122,36 @@ export default function ConsultasPage() {
             variant="ghost"
           >
             {isStarting ? (
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-primary"/>
             ) : (
-              <Search className="h-5 w-5 text-gray-500" />
+              <Search className="h-5 w-5 text-gray-500"/>
             )}
           </Button>
         </form>
       </div>
 
       <div className="w-full max-w-2xl flex-1 overflow-y-auto space-y-4 pb-8">
-        {/* Estado inicial */}
         {!details && !isStarting && (
           <div className="text-gray-500 text-sm text-center mt-8">
             Digite um CPF ou número de processo para iniciar a consulta.
           </div>
         )}
 
-        {/* Carregando */}
         {(isStarting || (isFetching && !details)) && (
           <div className="flex flex-col gap-3 mt-6 animate-pulse">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full"/>
+            <Skeleton className="h-24 w-full"/>
           </div>
         )}
 
-        {/* Status geral */}
         {details?.status && (
           <div className="flex justify-center mt-4">{getStatusDisplay(details.status)}</div>
         )}
 
-        {/* Resultados */}
         {(details?.processes || []).map((p: DetailedProcess) => (
-          <ProcessCard key={p.process_number} process={p} />
+          <ProcessCard key={p.process_number} process={p}/>
         ))}
 
-        {/* Nenhum processo encontrado */}
         {details && details.processes?.length === 0 && (
           <div className="text-gray-500 text-sm text-center mt-6">
             Nenhum processo encontrado para o termo informado.

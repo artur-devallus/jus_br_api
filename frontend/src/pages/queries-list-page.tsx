@@ -7,7 +7,16 @@ import {Checkbox} from "@/components/ui/checkbox";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {api} from "@/lib/axios.ts";
 import {formatCpfOrProcess, onlyDigits} from "@/lib/format-utils.ts";
-import {AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Loader2} from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Download,
+  ExternalLink,
+  Loader2
+} from "lucide-react";
 import {Query, QueryImpl} from "@/models/query.ts";
 import {exportAllProcessesToExcel} from "@/lib/export-process-utils.ts";
 
@@ -49,15 +58,21 @@ export default function QueriesListPage() {
     placeholderData: (prev) => prev,
   });
 
+  const detail = async (queryId: number) => {
+    return await api.get(`/v1/queries/${queryId}/detailed`).then((res) => new QueryImpl(res.data).processes);
+  }
+
   async function exportAll() {
     const {data: allQueries} = await api.get("/v1/queries", {
       params: {size: 1000, result_process_count_ge: 1},
     });
     const ids = allQueries.map((q: Query) => q.id);
 
-    await exportAllProcessesToExcel(ids, async (queryId: number) => {
-      return await api.get(`/v1/queries/${queryId}/detailed`).then((res) => new QueryImpl(res.data).processes);
-    });
+    await exportAllProcessesToExcel(ids, detail);
+  }
+
+  async function exportOne(p: Query) {
+    await exportAllProcessesToExcel([p.id], detail, `processo_${p.query_value}.xlsx`);
   }
 
   const displayStatus = (r: Query) => {
@@ -130,6 +145,7 @@ export default function QueriesListPage() {
               <TableHead>CPF/Processo</TableHead>
               <TableHead>Quantidade de processos</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,6 +154,25 @@ export default function QueriesListPage() {
                 <TableCell>{formatCpfOrProcess(q.query_value)}</TableCell>
                 <TableCell>{q.result_process_count}</TableCell>
                 <TableCell>{displayStatus(q)}</TableCell>
+                <TableCell className="flex gap-2">
+                  {/* Abrir processo */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => window.open(`/app?query_value=${q.query_value}`, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4"/>
+                  </Button>
+
+                  {/* Baixar processo */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => exportOne(q)}
+                  >
+                    <Download className="h-4 w-4"/>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
