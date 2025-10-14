@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { Search, LogOut, Import, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {useState} from "react";
+import {Search, LogOut, Import, Menu, TextSearch} from "lucide-react";
+import {Button} from "@/components/ui/button";
 
 interface SidebarProps {
   onLogout?: () => void;
   onNavigate?: (path: string) => void;
 }
 
-export default function Sidebar({ onLogout, onNavigate }: SidebarProps) {
+export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -26,7 +26,7 @@ export default function Sidebar({ onLogout, onNavigate }: SidebarProps) {
             onClick={() => setCollapsed(!collapsed)}
             className="ml-auto"
           >
-            <Menu size={20} />
+            <Menu size={20}/>
           </Button>
         </div>
 
@@ -39,7 +39,7 @@ export default function Sidebar({ onLogout, onNavigate }: SidebarProps) {
             }`}
             onClick={() => onNavigate?.("/app")}
           >
-            <Search size={18} />
+            <Search size={18}/>
             {!collapsed && <span>Consultas</span>}
           </Button>
 
@@ -50,8 +50,19 @@ export default function Sidebar({ onLogout, onNavigate }: SidebarProps) {
             }`}
             onClick={() => onNavigate?.("/app/import-file")}
           >
-            <Import size={18} />
+            <Import size={18}/>
             {!collapsed && <span>Importar Arquivo</span>}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className={`justify-start gap-2 ${
+              collapsed ? "justify-center px-0" : ""
+            }`}
+            onClick={() => onNavigate?.("/app/queries-list")}
+          >
+            <TextSearch size={18}/>
+            {!collapsed && <span>Histórico</span>}
           </Button>
         </nav>
       </div>
@@ -64,7 +75,7 @@ export default function Sidebar({ onLogout, onNavigate }: SidebarProps) {
           }`}
           onClick={onLogout}
         >
-          <LogOut size={18} />
+          <LogOut size={18}/>
           {!collapsed && <span>Sair</span>}
         </Button>
       </div>

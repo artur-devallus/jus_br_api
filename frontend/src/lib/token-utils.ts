@@ -14,7 +14,6 @@ export function getTokenPayload(tokenKey: string): JwtPayload | null {
   if (!token) return null;
   try {
     const [, payload] = token.split(".");
-    // console.log(JSON.parse(atob(payload)));
     return JSON.parse(atob(payload));
   } catch (error) {
     console.error(error);

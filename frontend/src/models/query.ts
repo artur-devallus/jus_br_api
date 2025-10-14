@@ -53,7 +53,7 @@ export interface Attachment {
   protocol_md5?: string | null;
 }
 
-interface ProcessJson {
+export interface ProcessJson {
   process: ProcessData;
   case_parties: CaseParty;
   movements: Movement[];

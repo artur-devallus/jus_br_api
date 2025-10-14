@@ -1,12 +1,13 @@
 import {createBrowserRouter} from "react-router-dom";
 import {NotLoggedRoute} from "./not-logged.route.tsx";
-import LandingPage from "@/pages/LandingPage.tsx";
-import LoginPage from "@/pages/LoginPage.tsx";
-import MaintenancePage from "@/pages/Maintenance.tsx";
-import NotFoundPage from "@/pages/NotFoundPage.tsx";
+import LandingPage from "@/pages/landing-page";
+import LoginPage from "@/pages/login-page";
+import MaintenancePage from "@/pages/maintenance-page";
+import NotFoundPage from "@/pages/not-found-page";
 import Layout from "@/components/layout/layout";
-import ConsultasPage from "@/pages/ConsultasPage.tsx";
-import {ImportPage} from "@/pages/ImportPage.tsx";
+import ConsultasPage from "@/pages/consultas-page.tsx";
+import ImportFilePage from "@/pages/import-file-page.tsx";
+import QueriesListPage from "@/pages/queries-list-page.tsx";
 
 
 export const router = createBrowserRouter([
@@ -29,7 +30,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "import-file",
-        element: <ImportPage/>
+        element: <ImportFilePage/>
+      },
+      {
+        path: "queries-list",
+        element: <QueriesListPage/>
       },
     ]
   },

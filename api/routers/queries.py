@@ -37,14 +37,21 @@ def _decompress_raw_json(raw_json: bytes | None) -> str | None:
 def list_queries(
         user=Depends(get_current_user),
         db: Session = Depends(get_db),
+        query_value: str = QueryParam(None, max_length=20, min_length=11),
+        result_process_count_ge: int = QueryParam(None, ge=0),
         page: int = QueryParam(1, ge=1),
-        size: int = QueryParam(20, ge=1, le=100),
+        size: int = QueryParam(20, ge=1, le=1000),
 ):
     query = db.query(QueryModel).order_by(QueryModel.created_at.desc())
 
-    # Restrição: usuário comum só vê as próprias queries
     if "admin" not in [g.name for g in user.groups]:
         query = query.filter(QueryModel.user_id == user.id)
+
+    if query_value is not None:
+        query = query.filter(QueryModel.query_value == query_value)
+
+    if result_process_count_ge is not None:
+        query = query.filter(QueryModel.result_process_count >= result_process_count_ge)
 
     results = query.offset((page - 1) * size).limit(size).all()
 
@@ -53,7 +60,7 @@ def list_queries(
     ]
 
 
-@router.post("", response_model=QueryOut)
+@router.post("", response_model=QueryDetailedOut)
 def create_query_endpoint(
         payload: QueryCreate, user=Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -69,7 +76,20 @@ def create_query_endpoint(
         if payload.enqueue:
             enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
 
-    return QueryOut.model_validate(q)
+    return QueryDetailedOut(
+        id=q.id,
+        query_type=q.query_type,
+        query_value=q.query_value,
+        status=q.status,
+        result_process_count=q.result_process_count,
+        processes=[
+            DetailedProcess(
+                process_number=p.process_number,
+                raw_json=_decompress_raw_json(p.raw_json),
+            )
+            for p in q.process
+        ],
+    )
 
 
 @router.get("/{query_id}", response_model=QueryOut)
