@@ -29,10 +29,23 @@ def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: 
     tribunals = all_tribunals if query_type == 'cpf' else [
         determine_tribunal_from_process(query_value)
     ]
-
-    tasks = [crawl_for_tribunal.s(query_id, tr, query_value).set(queue=tribunal_queue) for tr in tribunals]
-
-    chord(tasks)(finalize_query.s(query_id))
+    tasks = []
+    db = SessionLocal()
+    try:
+        for tribunal in tribunals:
+            crawl_task_log = CrawlTaskLog(
+                tribunal=tribunal,
+                status=CrawlStatus.running,
+                query_id=query_id,
+                attempts=0
+            )
+            db.add(crawl_task_log)
+            db.commit()
+            db.refresh(crawl_task_log)
+            tasks.append(crawl_for_tribunal.s(query_id, crawl_task_log.id, query_value).set(queue=tribunal_queue))
+        chord(tasks)(finalize_query.s(query_id))
+    finally:
+        db.close()
 
 
 def determine_tribunal_from_process(process_number: str) -> str:
@@ -54,28 +67,21 @@ def finalize_query(results, query_id):
 
 
 @celery.task(bind=True, max_retries=5, acks_late=True)
-def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
+def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_search: str):
     retries = getattr(self.request, "retries", 0)
-    log.info(f'Received task with query id {query_id} tribunal {tribunal} and term_to_search {term_to_search}')
+    log.info(f'Received task: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}')
 
     db = SessionLocal()
-    crawl_task_log = CrawlTaskLog(
-        tribunal=tribunal,
-        status=CrawlStatus.running,
-        query_id=query_id,
-        attempts=0
-    )
     if retries >= self.max_retries:
         if all_crawls_finished(db, query_id):
             update_query_status(db, query_id, QueryStatus.done)
         return
 
-    db.add(crawl_task_log)
-    db.commit()
-    db.refresh(crawl_task_log)
+    crawl_task_log: CrawlTaskLog = db.query(CrawlTaskLog).get(CrawlTaskLog.id)
+
     try:
         driver = get_driver_singleton()
-        results = run_crawler(driver, tribunal, term_to_search)
+        results = run_crawler(driver, crawl_task_log.tribunal, term_to_search)
         count = 0
         process = None
         for r in results:
@@ -83,7 +89,7 @@ def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
                 db,
                 query_id=query_id,
                 crawl_task_log_id=crawl_task_log.id,
-                tribunal=tribunal,
+                tribunal=crawl_task_log.tribunal,
                 process_number=only_digits(r.process.process_number),
                 raw_json=dataclasses.asdict(r)
             )
@@ -98,10 +104,13 @@ def crawl_for_tribunal(self, query_id: int, tribunal: str, term_to_search: str):
         if all_crawls_finished(db, query_id):
             update_query_status(db, query_id, QueryStatus.done)
         log.info(
-            f'Crawl for {query_id} tribunal {tribunal} and term_to_search {term_to_search} completed successfully'
+            f'Task finished: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}'
         )
     except Exception as exc:
-        log.error('Crawl task failed', exc_info=exc)
+        log.error(
+            f'Task failed: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}',
+            exc_info=exc
+        )
         crawl_task_log.status = CrawlStatus.failed
         crawl_task_log.attempts = (crawl_task_log.attempts or 0) + 1
         crawl_task_log.last_error = traceback.format_exc()
