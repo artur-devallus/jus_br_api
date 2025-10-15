@@ -15,6 +15,7 @@ from lib.log_utils import get_logger
 from lib.models import DetailedProcessData
 from lib.pje.service import get_pje_service_for_tribunal
 from lib.string_utils import only_digits
+from lib.trf5.service import get_trf5_service
 from tasks.celery_app import celery, tribunal_queue
 from tasks.driver_singleton import get_driver_singleton
 
@@ -164,11 +165,42 @@ def _get_for_eproc(term, grade, tribunal, driver):
     return all_processes
 
 
+def _get_for_trf5(term, driver):
+    all_processes = []
+
+    try:
+        log.info(f'running for trf5')
+        service = get_trf5_service(driver)
+        process_list = service.get_process_list(
+            term=term
+        )
+        for process in process_list:
+            try:
+                all_processes.append(service.get_detailed_process(
+                    term=term, process_index_or_number=process.process_number,
+                ))
+            except LibJusBrException as ex:
+                log.warning(ex.message)
+    except LibJusBrException as ex:
+        log.warning(ex.message)
+
+    return all_processes
+
+
 def run_crawler(driver, tribunal, term) -> List[DetailedProcessData]:
     all_processes = []
-    for grade in ['pje1g', 'pje2g']:
-        all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
+    if tribunal in ['trf1', 'trf3', 'trf6']:
+        for grade in ['pje1g', 'pje2g']:
+            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
 
-    all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
+    if tribunal == 'trf2':
+        all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
+
+    if tribunal == 'trf5':
+        all_processes.extend(_get_for_trf5(term, driver))
+
+    if tribunal == 'trf6':
+        for grade in ['eproc1g', 'eproc2g']:
+            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
 
     return all_processes
