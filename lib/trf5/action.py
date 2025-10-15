@@ -89,17 +89,14 @@ class TRF5Action(Action[TRF5Page]):
         self.page.driver.wait_condition(lambda x: self.page.captcha_input().get_attribute('value') == code)
 
     def _check_captcha_errors(self):
-        try:
-            self._get_rows()
-        except TimeoutException:
-            raise LibJusBrException('Captcha incorreto')
+        self._get_rows()
 
     def _do_search(self, max_retries=3):
         self._solve_image_captcha()
         self.page.search_button().click()
         try:
-            self._check_captcha_errors()
-        except LibJusBrException:
+            self._get_rows()
+        except TimeoutException:
             if max_retries == 0:
                 raise
             return self._do_search(max_retries - 1)

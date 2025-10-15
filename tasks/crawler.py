@@ -32,6 +32,7 @@ def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: 
     tasks = []
     db = SessionLocal()
     try:
+        db.query(CrawlTaskLog).filter(CrawlTaskLog.query_id == query_id).delete()
         for tribunal in tribunals:
             crawl_task_log = CrawlTaskLog(
                 tribunal=tribunal,
@@ -198,18 +199,18 @@ def _get_for_trf5(term, driver):
 
 def run_crawler(driver, tribunal, term) -> List[DetailedProcessData]:
     all_processes = []
-    if tribunal in ['trf1', 'trf3', 'trf6']:
-        for grade in ['pje1g', 'pje2g']:
-            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
-
-    if tribunal == 'trf2':
-        all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
+    # if tribunal in ['trf1', 'trf3', 'trf6']:
+    #     for grade in ['pje1g', 'pje2g']:
+    #         all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
+    #
+    # if tribunal == 'trf2':
+    #     all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
 
     if tribunal == 'trf5':
         all_processes.extend(_get_for_trf5(term, driver))
-
-    if tribunal == 'trf6':
-        for grade in ['eproc1g', 'eproc2g']:
-            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
+    #
+    # if tribunal == 'trf6':
+    #     for grade in ['eproc1g', 'eproc2g']:
+    #         all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
 
     return all_processes
