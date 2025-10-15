@@ -77,7 +77,7 @@ def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_sear
             update_query_status(db, query_id, QueryStatus.done)
         return
 
-    crawl_task_log: CrawlTaskLog = db.query(CrawlTaskLog).get(CrawlTaskLog.id)
+    crawl_task_log: CrawlTaskLog = db.query(CrawlTaskLog).get(crawl_task_log_id)
 
     try:
         driver = get_driver_singleton()
