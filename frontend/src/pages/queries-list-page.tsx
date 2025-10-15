@@ -1,12 +1,13 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
-import {api} from "@/lib/axios.ts";
-import {formatCpfOrProcess, onlyDigits} from "@/lib/format-utils.ts";
+import {Skeleton} from "@/components/ui/skeleton";
+import {api} from "@/lib/axios";
+import {formatCpfOrProcess, onlyDigits} from "@/lib/format-utils";
 import {
   AlertCircle,
   CheckCircle,
@@ -15,11 +16,10 @@ import {
   Clock,
   Download,
   ExternalLink,
-  Loader2
+  Loader2,
 } from "lucide-react";
-import {Query, QueryImpl} from "@/models/query.ts";
-import {exportAllProcessesToExcel} from "@/lib/export-process-utils.ts";
-
+import {Query, QueryImpl} from "@/models/query";
+import {exportAllProcessesToExcel} from "@/lib/export-process-utils";
 
 async function fetchQueries(params: {
   query_value?: string;
@@ -39,18 +39,27 @@ async function fetchQueries(params: {
 
 export default function QueriesListPage() {
   const [queryValue, setQueryValue] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [withMovements, setWithMovements] = useState(false);
   const [page, setPage] = useState(1);
+  const [isExportingAll, setIsExportingAll] = useState(false);
 
-  const {data, isFetching} = useQuery({
-    queryKey: ["queries", {
-      queryValue: queryValue ? (onlyDigits(queryValue).length === 11 || onlyDigits(queryValue).length == 20) ? queryValue : undefined : undefined,
-      withMovements,
-      page
-    }],
+  // debounce input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(queryValue), 500);
+    return () => clearTimeout(timer);
+  }, [queryValue]);
+
+  // reset page ao mudar filtro
+  useEffect(() => {
+    setPage(1);
+  }, [withMovements]);
+
+  const {data, isFetching, isLoading} = useQuery({
+    queryKey: ["queries", {queryValue: debouncedQuery, withMovements, page}],
     queryFn: () =>
       fetchQueries({
-        query_value: queryValue || undefined,
+        query_value: debouncedQuery || undefined,
         result_process_count_ge: withMovements ? 1 : undefined,
         page,
         size: 10,
@@ -59,20 +68,24 @@ export default function QueriesListPage() {
   });
 
   const detail = async (queryId: number) => {
-    return await api.get(`/v1/queries/${queryId}/detailed`).then((res) => new QueryImpl(res.data).processes);
-  }
+    return await api.get(`/v1/queries/${queryId}/detailed`).then((res) => new QueryImpl(res.data));
+  };
 
   async function exportAll() {
-    const {data: allQueries} = await api.get("/v1/queries", {
-      params: {size: 1000, result_process_count_ge: 1},
-    });
-    const ids = allQueries.map((q: Query) => q.id);
-
-    await exportAllProcessesToExcel(ids, detail);
+    try {
+      setIsExportingAll(true);
+      const {data: allQueries} = await api.get("/v1/queries", {
+        params: {size: 1000, result_process_count_ge: 1},
+      });
+      const ids = allQueries.map((q: Query) => q.id);
+      await exportAllProcessesToExcel(ids, detail);
+    } finally {
+      setIsExportingAll(false);
+    }
   }
 
   async function exportOne(p: Query) {
-    await exportAllProcessesToExcel([p.id], detail, `processo_${p.query_value}.xlsx`, 'detailed');
+    await exportAllProcessesToExcel([p.id], detail, `processo_${p.query_value}.xlsx`, "detailed");
   }
 
   const displayStatus = (r: Query) => {
@@ -80,25 +93,25 @@ export default function QueriesListPage() {
       case "queued":
         return (
           <span className="flex items-center gap-1 text-blue-600 font-medium">
-            <Clock size={14}/> Enfileirado
+            <Clock size={14} /> Enfileirado
           </span>
         );
       case "running":
         return (
           <span className="flex items-center gap-1 text-amber-600 font-medium">
-            <Loader2 size={14} className="animate-spin"/> Processando
+            <Loader2 size={14} className="animate-spin" /> Processando
           </span>
         );
       case "failed":
         return (
           <span className="flex items-center gap-1 text-red-600 font-medium">
-            <AlertCircle size={14}/> Erro
+            <AlertCircle size={14} /> Erro
           </span>
         );
       case "done":
         return (
           <span className="flex items-center gap-1 text-green-600 font-medium">
-            <CheckCircle size={14}/> Concluído
+            <CheckCircle size={14} /> Concluído
           </span>
         );
       default:
@@ -128,76 +141,89 @@ export default function QueriesListPage() {
             />
             <span>Com movimentações</span>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button onClick={() => setPage(1)} disabled={isFetching} className="flex-1 sm:flex-none">
-              Filtrar
-            </Button>
-            <Button variant="outline" onClick={exportAll} className="flex-1 sm:flex-none">
-              Exportar tudo
-            </Button>
-          </div>
+
+          <Button
+            variant="outline"
+            onClick={exportAll}
+            disabled={isExportingAll}
+            className="w-full sm:w-auto flex items-center justify-center gap-2"
+          >
+            {isExportingAll && <Loader2 size={16} className="animate-spin" />}
+            {isExportingAll ? "Exportando..." : "Exportar tudo"}
+          </Button>
         </div>
+
+        {/* Loading inicial */}
+        {(isLoading || (isFetching && !data)) && (
+          <div className="flex flex-col gap-2 mt-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        )}
 
         {/* Tabela */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>CPF/Processo</TableHead>
-              <TableHead>Quantidade de processos</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data?.map((q) => (
-              <TableRow key={q.id}>
-                <TableCell>{formatCpfOrProcess(q.query_value)}</TableCell>
-                <TableCell>{q.result_process_count}</TableCell>
-                <TableCell>{displayStatus(q)}</TableCell>
-                <TableCell className="flex gap-2">
-                  {/* Abrir processo */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => window.open(`/app?query_value=${q.query_value}`, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4"/>
-                  </Button>
-
-                  {/* Baixar processo */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => exportOne(q)}
-                  >
-                    <Download className="h-4 w-4"/>
-                  </Button>
-                </TableCell>
+        {data && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>CPF/Processo</TableHead>
+                <TableHead>Quantidade de processos</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {data.map((q) => (
+                <TableRow key={q.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {isFetching && <Loader2 size={14} className="animate-spin text-gray-400" />}
+                      {formatCpfOrProcess(q.query_value)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{q.result_process_count}</TableCell>
+                  <TableCell>{displayStatus(q)}</TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => window.open(`/app?query_value=${q.query_value}`, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => exportOne(q)}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
 
         {/* Paginação */}
-        <div className="flex justify-end items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            <ChevronLeft size={18}/>
-          </Button>
-          <span>Página {page}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={(data || [])?.length < 10}
-          >
-            <ChevronRight size={18}/>
-          </Button>
-        </div>
+        {data && (
+          <div className="flex justify-end items-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1 || isFetching}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft size={18} />
+            </Button>
+            <span>Página {page}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isFetching || data.length < 10}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <ChevronRight size={18} />
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

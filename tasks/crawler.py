@@ -199,18 +199,18 @@ def _get_for_trf5(term, driver):
 
 def run_crawler(driver, tribunal, term) -> List[DetailedProcessData]:
     all_processes = []
-    # if tribunal in ['trf1', 'trf3', 'trf6']:
-    #     for grade in ['pje1g', 'pje2g']:
-    #         all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
-    #
-    # if tribunal == 'trf2':
-    #     all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
+    if tribunal in ['trf1', 'trf3', 'trf6']:
+        for grade in ['pje1g', 'pje2g']:
+            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
+
+    if tribunal == 'trf2':
+        all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
 
     if tribunal == 'trf5':
         all_processes.extend(_get_for_trf5(term, driver))
-    #
-    # if tribunal == 'trf6':
-    #     for grade in ['eproc1g', 'eproc2g']:
-    #         all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
+
+    if tribunal == 'trf6':
+        for grade in ['eproc1g', 'eproc2g']:
+            all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
 
     return all_processes

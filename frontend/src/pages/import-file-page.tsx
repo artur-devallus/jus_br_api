@@ -3,7 +3,7 @@ import {useDropzone} from "react-dropzone";
 import * as XLSX from "xlsx";
 import {Button} from "@/components/ui/button";
 import {useCreateQuery} from "@/hooks/useQueries";
-import {DetailedProcess, Query, QueryImpl, QueryStatus} from "@/models/query";
+import {Query, QueryImpl, QueryStatus} from "@/models/query";
 import {UploadCloud, Loader2, CheckCircle, AlertCircle, Clock} from "lucide-react";
 import {formatCpfOrProcess, onlyDigits} from "@/lib/format-utils";
 import {api} from "@/lib/axios.ts";
@@ -103,8 +103,8 @@ export default function ImportFilePage() {
       rows.map(it => it.id),
       async (rowId: number) => {
         const row = rows.find(it => it.id === rowId);
-        return new Promise<DetailedProcess[]>((resolve) => {
-          resolve(row && row.query && row.query.processes ? row.query.processes : []);
+        return new Promise<Query>((resolve) => {
+          resolve(row!.query!);
         });
       }
     );
