@@ -6,9 +6,9 @@ from kombu import Queue  # noqa
 from core.config import settings
 
 celery = Celery(
-    "crawler",
-    broker=os.getenv("CELERY_BROKER_URL", settings.CELERY_BROKER_URL),
-    backend=os.getenv("CELERY_RESULT_BACKEND", settings.CELERY_RESULT_BACKEND),
+    'crawler',
+    broker=os.getenv('CELERY_BROKER_URL', settings.CELERY_BROKER_URL),
+    backend=os.getenv('CELERY_RESULT_BACKEND', settings.CELERY_RESULT_BACKEND),
     include=[
         'tasks.crawler'
     ]

@@ -33,15 +33,15 @@ class TRF5Action(Action[TRF5Page]):
         raise LibJusBrException(f'Cannot search term {term}')
 
     def _cpf_is_not_stroked(self):
-       try:
-           return (self
-                   .page
-                   .cpf_label()
-                   .find_elements(By.TAG_NAME, 'label')[0]
-                   .get_attribute('style') == 'text-decoration: line-through;'
-                   )
-       except StaleElementReferenceException:
-           return False
+        try:
+            return (self
+                    .page
+                    .cpf_label()
+                    .find_elements(By.TAG_NAME, 'label')[0]
+                    .get_attribute('style') == 'text-decoration: line-through;'
+                    )
+        except StaleElementReferenceException:
+            return False
 
     def search_cpf(self, cpf: str) -> 'TRF5Action':
         self.page.cpf_checkbox().click()
@@ -78,8 +78,10 @@ class TRF5Action(Action[TRF5Page]):
     def _solve_manual(cls):
         return input('Solve captcha!')
 
-    def _solve_image_captcha(self, retries=3):
-        image = self.page.captcha().screenshot_as_base64
+    def _solve_image_captcha(self):
+        captcha = self.page.captcha()
+        self.driver().scroll_to(captcha)
+        image = captcha.screenshot_as_base64
         code = solve_image_captcha(image)
         input_el = self.page.captcha_input()
         input_el.clear()
