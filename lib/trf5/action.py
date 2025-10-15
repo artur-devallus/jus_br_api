@@ -249,7 +249,7 @@ class TRF5Action(Action[TRF5Page]):
             for i in range(len(process_list)):
                 process = process_list[i]
                 if only_digits(process.process_number) == only_digits(process_index_or_number):
-                    row = rows[process_index_or_number]
+                    row = rows[i]
                     break
 
         if row is None:
