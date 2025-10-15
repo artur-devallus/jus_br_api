@@ -85,9 +85,9 @@ class PJeAction(Action[PJePage]):
 
     def _wait_row_or_error(self, timeout: int = QUERY_TIMEOUT):
         def _predicate(driver: CustomWebDriver) -> bool:
-            has_rows = len(driver.find_element(By.ID, self.page.PROCESS_TABLE).find_elements(By.TAG_NAME, "tr")) > 0
-            has_alert = driver.find_elements(By.CLASS_NAME, self.page.ERROR_MESSAGE)
             try:
+                has_rows = len(driver.find_element(By.ID, self.page.PROCESS_TABLE).find_elements(By.TAG_NAME, "tr")) > 0
+                has_alert = driver.find_elements(By.CLASS_NAME, self.page.ERROR_MESSAGE)
                 return has_rows or (len(has_alert) > 0 and has_alert[0].is_displayed())
             except StaleElementReferenceException:
                 return False
