@@ -34,7 +34,7 @@ def update_query_status(db: Session, query_id: int, status: QueryStatus, result_
         return None
     q.status = status
     if result_count is not None:
-        q.result_process_count = result_count
+        q.result_process_count = int(q.result_process_count or 0) + result_count
     db.add(q)
     db.commit()
     db.refresh(q)
