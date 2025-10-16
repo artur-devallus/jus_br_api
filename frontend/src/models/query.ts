@@ -187,6 +187,7 @@ export interface Query {
   query_value: string;
   status: QueryStatus;
   result_process_count: number;
+  created_at: string;
   processes: DetailedProcess[];
 }
 
@@ -195,11 +196,13 @@ export class QueryImpl implements Query {
   processes: DetailedProcess[];
   query_type: QueryType;
   query_value: string;
+  created_at: string;
   result_process_count: number;
   status: QueryStatus;
 
   constructor(q: Query) {
     this.id = q.id;
+    this.created_at = q.created_at;
     this.processes = q.processes.map(it => new DetailedProcessImpl(it));
     this.query_type = q.query_type;
     this.query_value = q.query_value;

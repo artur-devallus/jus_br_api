@@ -170,6 +170,7 @@ export default function QueriesListPage() {
                 <TableHead>CPF/Processo</TableHead>
                 <TableHead>Quantidade de processos</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Criado em</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -184,6 +185,7 @@ export default function QueriesListPage() {
                   </TableCell>
                   <TableCell>{q.result_process_count}</TableCell>
                   <TableCell>{displayStatus(q)}</TableCell>
+                  <TableCell>{new Date(q.created_at).toLocaleString('pt-BR')}</TableCell>
                   <TableCell className="flex gap-2">
                     <Button
                       variant="ghost"

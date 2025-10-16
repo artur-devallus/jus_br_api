@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -18,6 +19,7 @@ class QueryOut(BaseModel):
     query_value: str
     status: str
     result_process_count: int
+    created_at: datetime.datetime
     processes: List[SimpleProcess] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -34,6 +36,7 @@ class QueryDetailedOut(BaseModel):
     query_value: str
     status: str
     result_process_count: int
+    created_at: datetime.datetime
     processes: List[DetailedProcess]
 
     model_config = ConfigDict(from_attributes=True)

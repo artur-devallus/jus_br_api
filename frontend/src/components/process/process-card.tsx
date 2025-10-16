@@ -11,7 +11,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import {DetailedProcess} from "@/models/query";
-import {ScrollText, Users, FileText, Paperclip} from "lucide-react";
+import {ScrollText, Users, FileText} from "lucide-react";
 
 interface ProcessCardProps {
   process: DetailedProcess;
@@ -21,8 +21,7 @@ export function ProcessCard({process}: ProcessCardProps) {
   const proc = process.process().process;
   const parties = process.process().case_parties;
   const movements = process.process().movements;
-  const attachments = process.process().attachments || [];
-
+  
   return (
     <Card className="w-full max-w-3xl border-gray-200 shadow-sm hover:shadow-md transition">
       <CardHeader className="border-b bg-gray-50/60">
@@ -30,7 +29,7 @@ export function ProcessCard({process}: ProcessCardProps) {
           Processo <span className="text-primary">{process.formated_process_number()}</span>
         </CardTitle>
       </CardHeader>
-
+      
       <CardContent className="text-sm text-gray-700 space-y-2 pt-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
           <p><strong>Tribunal:</strong> {process.tribunal()}</p>
@@ -38,13 +37,13 @@ export function ProcessCard({process}: ProcessCardProps) {
           <p><strong>Nome:</strong> {process.activePartyAuthorName()}</p>
           <p><strong>Assunto:</strong> {proc.subject || "-"}</p>
         </div>
-
+        
         <Accordion type="single" collapsible className="w-full mt-4">
           {/* Detalhes */}
           <AccordionItem value="details">
             <AccordionTrigger className="text-gray-800 font-medium">
               <div className="flex items-center gap-2">
-                <ScrollText className="h-4 w-4 text-primary" />
+                <ScrollText className="h-4 w-4 text-primary"/>
                 Detalhes do processo
               </div>
             </AccordionTrigger>
@@ -59,12 +58,12 @@ export function ProcessCard({process}: ProcessCardProps) {
               <p><strong>Processo Referenciado:</strong> {proc.referenced_process_number || "-"}</p>
             </AccordionContent>
           </AccordionItem>
-
+          
           {/* Partes */}
           <AccordionItem value="parties">
             <AccordionTrigger className="text-gray-800 font-medium">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
+                <Users className="h-4 w-4 text-primary"/>
                 Partes
               </div>
             </AccordionTrigger>
@@ -89,7 +88,7 @@ export function ProcessCard({process}: ProcessCardProps) {
                   ))}
                 </ul>
               </div>
-
+              
               <div>
                 <strong>Polo Passivo:</strong>
                 <ul className="list-disc list-inside mt-1 space-y-1 max-h-[240px] overflow-y-auto pr-2">
@@ -112,12 +111,12 @@ export function ProcessCard({process}: ProcessCardProps) {
               </div>
             </AccordionContent>
           </AccordionItem>
-
+          
           {/* Movimentações */}
           <AccordionItem value="movements">
             <AccordionTrigger className="text-gray-800 font-medium">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
+                <FileText className="h-4 w-4 text-primary"/>
                 Movimentações
               </div>
             </AccordionTrigger>
@@ -136,7 +135,7 @@ export function ProcessCard({process}: ProcessCardProps) {
               )}
             </AccordionContent>
           </AccordionItem>
-
+          
           {/* Anexos */}
           {/*<AccordionItem value="attachments">*/}
           {/*  <AccordionTrigger className="text-gray-800 font-medium">*/}

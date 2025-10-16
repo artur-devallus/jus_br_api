@@ -89,6 +89,7 @@ def create_query_endpoint(
         id=q.id,
         query_type=q.query_type,
         query_value=q.query_value,
+        created_at=q.created_at,
         status=q.status,
         result_process_count=q.result_process_count,
         processes=[
@@ -113,6 +114,7 @@ def get_query(query_id: int, user=Depends(get_current_user), db: Session = Depen
         id=q.id,
         query_type=q.query_type,
         query_value=q.query_value,
+        created_at=q.created_at,
         status=q.status,
         result_process_count=q.result_process_count,
         processes=[SimpleProcess(process_number=p.process_number) for p in q.process],
@@ -131,6 +133,7 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
         id=q.id,
         query_type=q.query_type,
         query_value=q.query_value,
+        created_at=q.created_at,
         status=q.status,
         result_process_count=q.result_process_count,
         processes=[
