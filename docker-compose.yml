@@ -22,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 1024m
 
   celery:
     build: .
