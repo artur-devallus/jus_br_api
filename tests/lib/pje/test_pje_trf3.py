@@ -36,16 +36,9 @@ class TestTrf3(unittest.TestCase):
         self.assertEqual(4, len(process_list))
 
     def test_trf3_get_detailed_data_for_cpf_06013333815(self):
-        service = get_trf3_service(self.driver)
-        process_list = service.get_process_list(
-            term='75436817815',
-            grade='pje1g'
+        detailed_data = get_trf3_service(self.driver).get_detailed_process(
+            term='06013333815',
+            grade='pje1g',
         )
-        for process in process_list:
-            detailed_data = service.get_detailed_process(
-                term='75436817815',
-                grade='pje1g',
-                process_index_or_number=process.process_number
-            )
 
-            print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))
+        print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))
