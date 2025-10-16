@@ -57,7 +57,7 @@ export interface ProcessJson {
   process: ProcessData;
   case_parties: CaseParty;
   movements: Movement[];
-  attachments: Attachment[];
+  attachments?: Attachment[];
 }
 
 export interface DetailedProcess {

@@ -21,7 +21,7 @@ export function ProcessCard({process}: ProcessCardProps) {
   const proc = process.process().process;
   const parties = process.process().case_parties;
   const movements = process.process().movements;
-  const attachments = process.process().attachments;
+  const attachments = process.process().attachments || [];
 
   return (
     <Card className="w-full max-w-3xl border-gray-200 shadow-sm hover:shadow-md transition">
@@ -138,30 +138,30 @@ export function ProcessCard({process}: ProcessCardProps) {
           </AccordionItem>
 
           {/* Anexos */}
-          <AccordionItem value="attachments">
-            <AccordionTrigger className="text-gray-800 font-medium">
-              <div className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4 text-primary" />
-                Anexos
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-2 mt-1">
-              {attachments.length === 0 ? (
-                <p className="text-gray-500 text-sm">Nenhum anexo disponível.</p>
-              ) : (
-                <div className="max-h-[300px] overflow-y-auto pr-2 divide-y divide-gray-200">
-                  {attachments.map((a, i) => (
-                    <div key={i} className="py-2">
-                      <p><strong>Descrição:</strong> {a.description}</p>
-                      <p><strong>Data:</strong> {a.created_at || "-"}</p>
-                      <p><strong>Arquivo:</strong> {a.file_md5 ? "Disponível" : "Indisponível"}</p>
-                      <p><strong>Protocolo:</strong> {a.protocol_md5 || "-"}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
+          {/*<AccordionItem value="attachments">*/}
+          {/*  <AccordionTrigger className="text-gray-800 font-medium">*/}
+          {/*    <div className="flex items-center gap-2">*/}
+          {/*      <Paperclip className="h-4 w-4 text-primary" />*/}
+          {/*      Anexos*/}
+          {/*    </div>*/}
+          {/*  </AccordionTrigger>*/}
+          {/*  <AccordionContent className="space-y-2 mt-1">*/}
+          {/*    {attachments.length === 0 ? (*/}
+          {/*      <p className="text-gray-500 text-sm">Nenhum anexo disponível.</p>*/}
+          {/*    ) : (*/}
+          {/*      <div className="max-h-[300px] overflow-y-auto pr-2 divide-y divide-gray-200">*/}
+          {/*        {attachments.map((a, i) => (*/}
+          {/*          <div key={i} className="py-2">*/}
+          {/*            <p><strong>Descrição:</strong> {a.description}</p>*/}
+          {/*            <p><strong>Data:</strong> {a.created_at || "-"}</p>*/}
+          {/*            <p><strong>Arquivo:</strong> {a.file_md5 ? "Disponível" : "Indisponível"}</p>*/}
+          {/*            <p><strong>Protocolo:</strong> {a.protocol_md5 || "-"}</p>*/}
+          {/*          </div>*/}
+          {/*        ))}*/}
+          {/*      </div>*/}
+          {/*    )}*/}
+          {/*  </AccordionContent>*/}
+          {/*</AccordionItem>*/}
         </Accordion>
       </CardContent>
     </Card>

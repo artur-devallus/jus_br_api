@@ -17,7 +17,7 @@ const asDetailed = async (
       const p = proc.process().process;
       const parties = proc.process().case_parties;
       const movements = proc.process().movements;
-      const attachments = proc.process().attachments;
+      const attachments = proc.process().attachments || [];
 
       // Cabeçalho principal
       wsData.push([""]);
