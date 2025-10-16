@@ -251,7 +251,7 @@ def new_driver(
     if headless:
         options.add_argument('--headless=new')
 
-    proxy_server = '14.251.13.0:8080'
+    proxy_server = '168.181.191.153:7080'
     options.add_argument('--no-sandbox')
     if proxy:
         options.add_argument(f'--proxy-server={proxy_server}')

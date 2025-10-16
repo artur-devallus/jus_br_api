@@ -53,7 +53,7 @@ def list_queries(
 ):
     query = db.query(QueryModel).order_by(QueryModel.created_at.desc())
 
-    if "admin" not in [g.name for g in user.groups]:
+    if 'admin' not in [g.name for g in user.groups]:
         query = query.filter(QueryModel.user_id == user.id)
 
     if query_value is not None:

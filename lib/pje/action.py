@@ -373,7 +373,7 @@ class PJeAction(Action[PJePage]):
             process=self._extract_process_data(),
             case_parties=self._extract_case_parties(),
             movements=self._extract_movements(),
-            attachments=self._extract_attachments()
+            # attachments=self._extract_attachments()
         )
         self.page.close_current_window()
         return detailed_data
