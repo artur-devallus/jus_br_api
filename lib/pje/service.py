@@ -4,7 +4,7 @@ from lib.exceptions import LibJusBrException
 from lib.log_utils import get_logger
 from lib.pje.action import PJeAction
 from lib.pje.constants import URLS
-from lib.pje.page import TRF1PJePage, TRF3PJePage, TRF5PJePage, TRF6PJePage
+from lib.pje.page import TRF1PJePage, TRF3PJePage, TRF6PJePage
 from lib.pje.types import Grade, TribunalPje
 from lib.webdriver.driver import CustomWebDriver
 from lib.webdriver.service import Service
@@ -52,6 +52,21 @@ class PJeService(Service[PJeAction]):
         logger.info(f'Finished get detailed process data for term {term}')
         return data
 
+    def get_detailed_processes(
+            self, term: str, grade: Grade
+    ):
+        logger.info(f'Starting get detailed process data for term {term}')
+        self.go_to(self._get_proper_url(grade))
+        data = (
+            self
+            .action
+            .enter_site()
+            .search_term(term)
+            .extract_all()
+        )
+        logger.info(f'Finished get detailed process data for term {term}')
+        return data
+
 
 def get_trf1_service(d: CustomWebDriver) -> PJeService:
     return PJeService(
@@ -65,6 +80,7 @@ def get_trf3_service(d: CustomWebDriver) -> PJeService:
         action=PJeAction(TRF3PJePage(driver=d)),
         tribunal='trf3'
     )
+
 
 def get_trf6_service(d: CustomWebDriver) -> PJeService:
     return PJeService(

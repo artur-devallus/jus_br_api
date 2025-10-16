@@ -22,6 +22,7 @@ class PJePage(Page):
     MOVEMENTS_PANEL_BODY: str = dataclasses.field()
     MOVEMENTS_TABLE_BODY: str = dataclasses.field()
     MOVEMENT_PAGE_INPUT: str = dataclasses.field()
+    NEXT_PAGE_BUTTON: str = dataclasses.field()
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field()
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field()
@@ -116,6 +117,9 @@ class PJePage(Page):
     def movements_page_input(self):
         return self.driver.find_by_id(self.MOVEMENT_PAGE_INPUT)
 
+    def next_page_button(self):
+        return self.driver.find_by_id(self.NEXT_PAGE_BUTTON)
+
     def attachments_quantity(self):
         return int(only_digits(self.driver.find_by_id(self.ATTACHMENTS_PANEL_BODY).find_element(
             By.CLASS_NAME, 'pull-right'
@@ -155,6 +159,7 @@ class TRF1PJePage(PJePage):
         default='j_id136:processoEvento:tb'
     )
     MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id136:j_id546:j_id547Input')
+    NEXT_PAGE_BUTTON: str = dataclasses.field(default='j_id136:j_id546:j_id547ArrowInc')
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id136:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id136:processoDocumentoGridTab:tb')
@@ -186,6 +191,7 @@ class TRF3PJePage(PJePage):
     MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id145:processoEventoPanel_body')
     MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id145:processoEvento:tb')
     MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id145:j_id556:j_id557Input')
+    NEXT_PAGE_BUTTON: str = dataclasses.field(default='j_id145:j_id556:j_id557ArrowInc')
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id145:processoDocumentoGridTab:tb')
@@ -215,6 +221,7 @@ class TRF5PJePage(PJePage):
     MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id140:processoEventoPanel_body')
     MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id140:processoEvento:tb')
     MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id140:j_id545:j_id546Input')
+    NEXT_PAGE_BUTTON: str = dataclasses.field(default='j_id140:j_id545:j_id546ArrowInc')
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id140:processoDocumentoGridTab:tb')
@@ -244,6 +251,7 @@ class TRF6PJePage(PJePage):
     MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoEventoPanel_body')
     MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoEvento:tb')
     MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id141:j_id541:j_id542Input')
+    NEXT_PAGE_BUTTON: str = dataclasses.field(default='j_id141:j_id541:j_id542ArrowInc')
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTab:tb')

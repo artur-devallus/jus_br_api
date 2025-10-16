@@ -249,8 +249,7 @@ class PJeAction(Action[PJePage]):
             if len(movements) == quantity:
                 break
 
-            self.page.driver.scroll_to(self.page.movements_page_input())
-            self._input_next(self.page.movements_page_input())
+            self.page.next_page_button().click()
 
             self.driver().wait_condition(lambda x: _all_rows_changed_predicate(
                 x, self.page.MOVEMENTS_TABLE_BODY, all_rows
@@ -377,3 +376,22 @@ class PJeAction(Action[PJePage]):
         )
         self.page.close_current_window()
         return detailed_data
+
+    def extract_all(self):
+        self._wait_row_or_error()
+        all_data = []
+        rows = self.page.get_process_rows()
+        for row in rows:
+            tds = row.find_elements(By.TAG_NAME, "td")
+            tds[0].click()
+            self.driver().wait_windows_greather_than(1)
+
+            self.page.switch_window()
+            all_data.append(DetailedProcessData(
+                process=self._extract_process_data(),
+                case_parties=self._extract_case_parties(),
+                movements=self._extract_movements(),
+                # attachments=self._extract_attachments()
+            ))
+            self.page.close_current_window()
+        return all_data

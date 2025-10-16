@@ -169,17 +169,12 @@ def _get_for_grade(term, grade, tribunal, driver):
     try:
         log.info(f'running for {tribunal} {grade}')
         pje_service = get_pje_service_for_tribunal(tribunal=tribunal, driver=driver)
-        process_list = pje_service.get_process_list(
-            term=term, grade=grade
-        )
-
-        for process in process_list:
-            try:
-                all_processes.append(pje_service.get_detailed_process(
-                    term=term, grade=grade, process_index_or_number=process.process_number,
-                ))
-            except LibJusBrException as ex:
-                log.warning(ex.message)
+        try:
+            all_processes.extend(pje_service.get_detailed_processes(
+                term=term, grade=grade
+            ))
+        except LibJusBrException as ex:
+            log.warning(ex.message)
 
     except LibJusBrException as ex:
         log.warning(ex.message)
