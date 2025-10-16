@@ -1,4 +1,5 @@
 import gzip
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam
 from sqlalchemy.orm import Session
@@ -31,6 +32,14 @@ def _decompress_raw_json(raw_json: bytes | None) -> str | None:
         return gzip.decompress(raw_json).decode("utf-8")
     except (RuntimeError, Exception):
         return None
+
+
+def _remove_keys(json_str: str, keys_to_remove) -> str:
+    data = json.loads(json_str)
+    for key in keys_to_remove:
+        if key in data:
+            del data[key]
+    return json.dumps(data)
 
 
 @router.get("", response_model=list[QueryOut])
@@ -85,7 +94,7 @@ def create_query_endpoint(
         processes=[
             DetailedProcess(
                 process_number=p.process_number,
-                raw_json=_decompress_raw_json(p.raw_json),
+                raw_json=_remove_keys(_decompress_raw_json(p.raw_json), ['attachments']),
             )
             for p in q.process
         ],
@@ -127,7 +136,7 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
         processes=[
             DetailedProcess(
                 process_number=p.process_number,
-                raw_json=_decompress_raw_json(p.raw_json),
+                raw_json=_remove_keys(_decompress_raw_json(p.raw_json), ['attachments']),
             )
             for p in q.process
         ],
