@@ -158,7 +158,7 @@ class TRF1PJePage(PJePage):
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id136:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id136:processoDocumentoGridTab:tb')
-    ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id136:j_id648:j_id649Input')
+    ATTACHMENT_PAGE_INPUT: str = dataclasses.field(default='j_id136:j_id638:j_id639Input')
 
     DOWNLOAD_PDF_FILE: str = dataclasses.field(
         default='j_id42:downloadPDF'

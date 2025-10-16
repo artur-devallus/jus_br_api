@@ -311,3 +311,15 @@ class TestTrf1(unittest.TestCase):
         self.assertEqual(datetime.datetime(2021, 12, 3, 19, 5, 44), detailed_data.movements[38].created_at)
         self.assertIsNone(detailed_data.movements[38].attachments[0].document_ref)
         self.assertIsNone(detailed_data.movements[38].attachments[0].document_date)
+
+    def test_all(self):
+        service = get_trf1_service(self.driver)
+
+        process_list = service.get_process_list(term='21546823832', grade='pje1g')
+        for process in process_list:
+            detailed_data = service.get_detailed_process(
+                term='21546823832',
+                process_index_or_number=process.process_number,
+                grade='pje1g',
+            )
+            print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))
