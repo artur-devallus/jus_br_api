@@ -9,6 +9,10 @@ class QueryCreate(BaseModel):
     enqueue: bool = Field(default=False)
 
 
+class QueryEnqueue(BaseModel):
+    force: bool = Field(default=False)
+
+
 class SimpleProcess(BaseModel):
     process_number: str
 

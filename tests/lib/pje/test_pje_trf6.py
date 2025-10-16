@@ -17,8 +17,8 @@ class TestTrf6(unittest.TestCase):
 
     def test_trf3_get_detailed_data_for_cpf_98470702(self):
         detailed_data = get_trf6_service(self.driver).get_detailed_process(
-            term='02598470702',
-            grade='pje1g',
+            term='21174113804',
+            grade='pje2g',
         )
 
         print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))

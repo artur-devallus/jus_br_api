@@ -24,7 +24,13 @@ all_tribunals = ['trf1', 'trf2', 'trf3', 'trf4', 'trf5', 'trf6']
 
 
 @celery.task(bind=True)
-def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: str):
+def enqueue_crawls_for_query(
+        self,
+        query_id: int,
+        query_type: str,
+        query_value: str,
+        force: bool = False,
+):
     log.info('Crawl for query %s with value %s', query_id, query_type)
     tribunals = all_tribunals if query_type == 'cpf' else [
         determine_tribunal_from_process(query_value)
@@ -32,17 +38,32 @@ def enqueue_crawls_for_query(self, query_id: int, query_type: str, query_value: 
     tasks = []
     db = SessionLocal()
     try:
-        db.query(CrawlTaskLog).filter(CrawlTaskLog.query_id == query_id).delete()
+        if force:
+            db.query(CrawlTaskLog).filter(CrawlTaskLog.query_id == query_id).delete()
+
+        all_crawl_tasks = db.query(CrawlTaskLog).filter(
+            CrawlTaskLog.query_id == query_id
+        )
         for tribunal in tribunals:
-            crawl_task_log = CrawlTaskLog(
-                tribunal=tribunal,
-                status=CrawlStatus.running,
-                query_id=query_id,
-                attempts=0
-            )
-            db.add(crawl_task_log)
-            db.commit()
-            db.refresh(crawl_task_log)
+            crawl_task_log = next((x for x in all_crawl_tasks if x.tribunal == tribunal), None)
+
+            if not crawl_task_log:
+                crawl_task_log = CrawlTaskLog(
+                    tribunal=tribunal,
+                    status=CrawlStatus.running,
+                    query_id=query_id,
+                    attempts=0
+                )
+                db.add(crawl_task_log)
+                db.commit()
+                db.refresh(crawl_task_log)
+            if crawl_task_log.status == CrawlStatus.done:
+                log.info(f'Task already done, skipping: '
+                         f'query_id={query_id} '
+                         f'crawl_task_log={crawl_task_log.id} '
+                         f'tribunal={crawl_task_log.tribunal} '
+                         f'term_to_search={query_value}')
+                continue
             tasks.append(crawl_for_tribunal.s(query_id, crawl_task_log.id, query_value).set(queue=tribunal_queue))
         chord(tasks)(finalize_query.s(query_id))
     finally:

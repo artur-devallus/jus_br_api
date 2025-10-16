@@ -42,3 +42,15 @@ class TestTrf3(unittest.TestCase):
         )
 
         print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))
+
+    def test_all(self):
+        service = get_trf3_service(self.driver)
+
+        process_list = service.get_process_list(term='14882297833', grade='pje2g')
+        for process in process_list:
+            detailed_data = service.get_detailed_process(
+                term='14882297833',
+                process_index_or_number=process.process_number,
+                grade='pje2g',
+            )
+            print(json.dumps(dataclasses.asdict(detailed_data), indent=2, default=default_json_encoder))

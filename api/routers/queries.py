@@ -13,7 +13,7 @@ from schemas.query import (
     QueryOut,
     SimpleProcess,
     QueryDetailedOut,
-    DetailedProcess,
+    DetailedProcess, QueryEnqueue,
 )
 from tasks.crawler import enqueue_crawls_for_query
 
@@ -78,12 +78,12 @@ def create_query_endpoint(
     if existing:
         q = existing
         if q.status != QueryStatus.done and payload.enqueue:
-            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value, False)
             update_query_status(db, q.id, QueryStatus.queued)
     else:
         q = create_query(db, user.id, payload.term)
         if payload.enqueue:
-            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+            enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value, False)
 
     return QueryDetailedOut(
         id=q.id,
@@ -147,7 +147,12 @@ def get_query_detailed(query_id: int, user=Depends(get_current_user), db: Sessio
 
 
 @router.post("/{query_id}/enqueue", response_model=QueryOut)
-def enqueue_query(query_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def enqueue_query(
+        query_id: int,
+        payload: QueryEnqueue,
+        user=Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
     q = db.query(QueryModel).get(query_id)
     if not q:
         raise HTTPException(404, "Not found")
@@ -155,6 +160,6 @@ def enqueue_query(query_id: int, user=Depends(get_current_user), db: Session = D
     _authorize_query(q, user)
 
     update_query_status(db, q.id, QueryStatus.queued)
-    enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value)
+    enqueue_crawls_for_query.delay(q.id, q.query_type, q.query_value, payload.force)
 
     return QueryOut.model_validate(q)
