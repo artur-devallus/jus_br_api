@@ -48,7 +48,13 @@ class CustomWebDriver(WebDriver):
 
     def quit(self) -> None:
         self.remove_folder()
-        super().quit()
+        try:
+            super().quit()
+        finally:
+            try:
+                self.service.stop()
+            except (RuntimeError, Exception):
+                os.system("pkill -f 'chrome --type=renderer' || true")
 
     def __exit__(self, *args, **kwargs):
         self.quit()

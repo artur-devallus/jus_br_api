@@ -16,8 +16,8 @@ from lib.models import DetailedProcessData
 from lib.pje.service import get_pje_service_for_tribunal
 from lib.string_utils import only_digits
 from lib.trf5.service import get_trf5_service
+from lib.webdriver.driver import new_driver
 from tasks.celery_app import celery, tribunal_queue
-from tasks.driver_singleton import get_driver_singleton
 
 log = get_logger(__name__)
 all_tribunals = ['trf1', 'trf2', 'trf3', 'trf4', 'trf5', 'trf6']
@@ -85,8 +85,8 @@ def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_sear
              f'tribunal={crawl_task_log.tribunal} '
              f'term_to_search={term_to_search}')
     try:
-        driver = get_driver_singleton()
-        results = run_crawler(driver, crawl_task_log.tribunal, term_to_search)
+        with new_driver() as driver:
+            results = run_crawler(driver, crawl_task_log.tribunal, term_to_search)
         count = 0
         process = None
         for r in results:
