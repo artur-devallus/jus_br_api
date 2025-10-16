@@ -20,11 +20,11 @@ interface Row {
 export default function ImportFilePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const {mutateAsync: startQuery} = useCreateQuery();
-
+  
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
-
+    
     const reader = new FileReader();
     reader.onload = (e) => {
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -32,18 +32,18 @@ export default function ImportFilePage() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
       const values = (json as string[][]).flat().filter((v) => !!v);
-
+      
       const newRows: Row[] = values.map((val, i) => {
         const digits = onlyDigits(String(val)).padStart(11, "0");
         const type = digits.length === 11 ? "cpf" : "process";
         return {id: i, value: digits, type, status: "queued"};
       });
-
+      
       setRows(newRows);
     };
     reader.readAsArrayBuffer(file);
   }, []);
-
+  
   const {getRootProps, getInputProps, isDragActive} = useDropzone({
     onDrop,
     accept: {
@@ -51,7 +51,7 @@ export default function ImportFilePage() {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [],
     },
   });
-
+  
   const handleSend = async () => {
     for (const row of rows) {
       setRows((prev) =>
@@ -71,14 +71,14 @@ export default function ImportFilePage() {
       }
     }
   };
-
+  
   useEffect(() => {
     const interval = setInterval(async () => {
       const running = rows.filter(
         (r) => r.query && (r.status === "running" || r.status === "queued")
       );
       if (running.length === 0) return;
-
+      
       for (const row of running) {
         try {
           const q = await api
@@ -97,7 +97,7 @@ export default function ImportFilePage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [rows]);
-
+  
   const handleDownload = async () => {
     await exportAllProcessesToExcel(
       rows.map(it => it.id),
@@ -109,13 +109,13 @@ export default function ImportFilePage() {
       }
     );
   };
-
+  
   const displayStatus = (r: Row) => {
     switch (r.status) {
       case "queued":
         return (
           <span className="flex items-center gap-1 text-blue-600 font-medium">
-            <Clock size={14}/> Enfileirado
+            <Clock size={14}/> Em fila
           </span>
         );
       case "running":
@@ -140,22 +140,28 @@ export default function ImportFilePage() {
         return "Não enviado";
     }
   };
-
+  
   const displayProcessCount = (r: Row) => {
     const count = r.query && r.query.processes ? r.query.processes.length : r.query?.result_process_count;
     return count === 0
-      ? "Nenhum processo encontrado"
+      ? "-"
       : count === 1
         ? "1 processo encontrado"
         : `${count} processos encontrados`;
   }
-
+  
   return (
     <div className="p-4 sm:p-6 w-full min-h-screen flex flex-col items-center">
-      <h1 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-center">
+      <h1 className="text-xl sm:text-2xl font-semibold mb-2 text-center">
         Importar Consultas
       </h1>
-
+      
+      <p className="text-gray-600 text-sm sm:text-base mb-4 text-center">
+        {rows.length > 0
+          ? `${rows.length} CPF${rows.length > 1 ? "s" : ""} importado${rows.length > 1 ? "s" : ""}`
+          : "Nenhum CPF importado ainda"}
+      </p>
+      
       {/* Dropzone */}
       <div
         {...getRootProps()}
@@ -170,7 +176,7 @@ export default function ImportFilePage() {
             : "Arraste um arquivo CSV/XLSX ou clique para selecionar"}
         </p>
       </div>
-
+      
       {/* Botões */}
       <div className="flex flex-col sm:flex-row items-center gap-3 mt-6 mb-6 w-full max-w-2xl justify-center">
         <Button onClick={handleSend} disabled={!rows.length} className="w-full sm:w-auto">
@@ -185,14 +191,14 @@ export default function ImportFilePage() {
           Baixar Resultados
         </Button>
       </div>
-
+      
       {/* Tabela */}
       <div className="w-full max-w-5xl overflow-x-auto border rounded shadow-sm">
         <table className="min-w-full text-xs sm:text-sm">
           <thead className="bg-gray-100 text-gray-700 uppercase text-[13px]">
           <tr>
             <th className="px-3 sm:px-4 py-2 text-left">CPF/Processo</th>
-            <th className="px-3 sm:px-4 py-2 text-left">Quantidade</th>
+            <th className="px-3 sm:px-4 py-2 text-left">Processos encontrados</th>
             <th className="px-3 sm:px-4 py-2 text-left">Status</th>
           </tr>
           </thead>
@@ -205,9 +211,7 @@ export default function ImportFilePage() {
               } hover:bg-blue-50`}
             >
               <td className="px-3 sm:px-4 py-2 truncate max-w-[220px]">
-                {r.value.length === 11
-                  ? `CPF: ${formatCpfOrProcess(r.value)}`
-                  : `Processo: ${formatCpfOrProcess(r.value)}`}
+                {formatCpfOrProcess(r.value)}
               </td>
               <td className="px-3 sm:px-4 py-2">
                 {r.query ? displayProcessCount(r) : ""}

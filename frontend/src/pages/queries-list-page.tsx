@@ -93,7 +93,7 @@ export default function QueriesListPage() {
       case "queued":
         return (
           <span className="flex items-center gap-1 text-blue-600 font-medium">
-            <Clock size={14} /> Enfileirado
+            <Clock size={14} /> Em fila
           </span>
         );
       case "running":
