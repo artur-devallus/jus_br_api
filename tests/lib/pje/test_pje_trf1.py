@@ -28,7 +28,7 @@ class TestTrf1(unittest.TestCase):
 
     def test_trf1_get_simple_data_for_cpf_37626361334(self):
         process_list = get_trf1_service(self.driver).get_process_list(
-            term='37626361334',
+            term='79681441834',
             grade='pje1g',
         )
 
@@ -48,11 +48,6 @@ class TestTrf1(unittest.TestCase):
         self.assertEqual(datetime.datetime(2025, 10, 7, 15, 28, 31), simple_data.last_update)
 
     def test_trf1_get_detailed_data_for_cpf_37626361334(self):
-        service = get_trf1_service(self.driver)
-        process_list = service.get_process_list(term='09058370372', grade='pje1g')
-        for p in process_list[1:]:
-            service.get_detailed_process(term='09058370372', grade='pje1g', process_index_or_number=p.process_number)
-
         detailed_data = get_trf1_service(self.driver).get_detailed_process(
             term='09058370372',
             grade='pje1g',

@@ -115,7 +115,9 @@ class PJeAction(Action[PJePage]):
         for row in rows:
             tds = row.find_elements(By.TAG_NAME, "td")
             process_class, process_details, persons = tds[1].text.split('\n')
-            status, status_at = tds[2].text.rsplit('(', maxsplit=1)
+            status, status_at = None, None
+            if tds[2].text != '':
+                status, status_at = tds[2].text.rsplit('(', maxsplit=1)
             plaintiff, defendant = persons.split(' X ')
             process_number, subject = process_details.split(' - ')
             process_list.append(SimpleProcessData(
@@ -125,10 +127,10 @@ class PJeAction(Action[PJePage]):
                 subject=subject.strip(),
                 plaintiff=plaintiff.strip(),
                 defendant=defendant.strip(),
-                status=status.strip(),
+                status=status.strip() if status else None,
                 last_update=to_date_time(
                     status_at.strip().replace('(', '').replace(')', '')
-                ),
+                ) if status_at else None,
             ))
         return process_list
 
