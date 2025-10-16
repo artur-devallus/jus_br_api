@@ -14,10 +14,13 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium_stealth import stealth
 
+from lib.log_utils import get_logger
 from lib.webdriver.constants import (
     HEADLESS, WEBDRIVER_BASE_PATH, CHROME_BINARY,
     CHROMEDRIVER_PATH, PAGE_LOAD_TIMEOUT, DEFAULT_TIMEOUT, PROXY, DEFALT_CHROME_AGENT
 )
+
+log = get_logger('chrome_driver')
 
 
 def _window_handles_gt_predicate(driver, expected_len):
@@ -30,6 +33,7 @@ class CustomWebDriver(WebDriver):
         self.options = options
         self.download_folder = download_folder
         self.base_folder = base_folder
+        log.info(f'new driver has launched pid={self.service.process.pid}')
 
     def remove_folder(self):
         try:
@@ -48,13 +52,18 @@ class CustomWebDriver(WebDriver):
 
     def quit(self) -> None:
         self.remove_folder()
+        chrome_pid = self.service.process.pid
         try:
             super().quit()
         finally:
             try:
                 self.service.stop()
-            except (RuntimeError, Exception):
-                os.system("pkill -f 'chrome --type=renderer' || true")
+            except Exception:
+                pass
+            if chrome_pid:
+                os.system(f"pkill -P {chrome_pid} || true")
+
+        log.info(f'driver closed pid={self.service.process.pid}')
 
     def __exit__(self, *args, **kwargs):
         self.quit()
