@@ -207,8 +207,8 @@ class PJeAction(Action[PJePage]):
             passive=self._extract_passive_parties(),
         )
 
-    @classmethod
-    def _extract_movement(cls, el) -> Movement:
+    def _extract_movement(self, el) -> Movement:
+        self.page.driver.scroll_to(el)
         td1, td2 = [x.text for x in el.find_elements(By.TAG_NAME, 'td')]
         created_at, description = td1.split(' - ', maxsplit=1)
         if td2:
@@ -239,7 +239,7 @@ class PJeAction(Action[PJePage]):
     def _extract_movements(self) -> List[Movement]:
         movements = []
         quantity = self.page.movements_quantity()
-
+        self.driver().scroll_to(self.page.movements_table())
         while len(movements) != quantity:
             rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
             all_rows = [row.find_element(By.TAG_NAME, 'td').text for row in rows]
@@ -249,6 +249,7 @@ class PJeAction(Action[PJePage]):
             if len(movements) == quantity:
                 break
 
+            self.page.driver.scroll_to(self.page.movements_page_input())
             self._input_next(self.page.movements_page_input())
 
             self.driver().wait_condition(lambda x: _all_rows_changed_predicate(

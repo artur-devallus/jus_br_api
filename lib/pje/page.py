@@ -243,7 +243,7 @@ class TRF6PJePage(PJePage):
 
     MOVEMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoEventoPanel_body')
     MOVEMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoEvento:tb')
-    MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id141:j_id545:j_id546Input')
+    MOVEMENT_PAGE_INPUT: str = dataclasses.field(default='j_id141:j_id541:j_id542Input')
 
     ATTACHMENTS_PANEL_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTabPanel_body')
     ATTACHMENTS_TABLE_BODY: str = dataclasses.field(default='j_id141:processoDocumentoGridTab:tb')
