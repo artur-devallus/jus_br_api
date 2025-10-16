@@ -28,11 +28,11 @@ from lib.webdriver.driver import CustomWebDriver
 log = get_logger(__name__)
 
 
-def _first_row_changed_predicate(driver, id_table, first_row_text):
+def _last_row_changed_predicate(driver, id_table, first_row_text):
     try:
         current_text = driver.find_element(
             By.ID, id_table
-        ).find_elements(By.TAG_NAME, 'tr')[0].find_element(
+        ).find_elements(By.TAG_NAME, 'tr')[-1].find_element(
             By.TAG_NAME, 'td'
         ).text
         return first_row_text != current_text
@@ -233,7 +233,7 @@ class PJeAction(Action[PJePage]):
 
         while len(movements) != quantity:
             rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
-            first_row_text = rows[0].find_element(By.TAG_NAME, 'td').text
+            first_row_id = rows[0].find_element(By.TAG_NAME, 'td').id
 
             movements.extend([self._extract_movement(x) for x in rows])
 
@@ -242,8 +242,8 @@ class PJeAction(Action[PJePage]):
 
             self._input_next(self.page.movements_page_input())
 
-            self.driver().wait_condition(lambda x: _first_row_changed_predicate(
-                x, self.page.MOVEMENTS_TABLE_BODY, first_row_text
+            self.driver().wait_condition(lambda x: _last_row_changed_predicate(
+                x, self.page.MOVEMENTS_TABLE_BODY, first_row_id
             ), timeout=20)
 
         return movements
@@ -254,6 +254,9 @@ class PJeAction(Action[PJePage]):
             return False
         elif 'Denied' in self.page.driver.title:
             log.warning(f'Document {description} access denied')
+            return False
+        elif 'Consulta pública ·' in self.page.driver.title:
+            log.warning(f'Document {description} invalid url')
             return False
         else:
             return True
@@ -319,7 +322,7 @@ class PJeAction(Action[PJePage]):
         while len(attachments) != quantity:
             rows = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')
             rows_quantity = len(rows)
-            first_row_text = rows[0].find_element(By.TAG_NAME, 'td').text
+            last_row_text = rows[-1].find_element(By.TAG_NAME, 'td').text
 
             for i in range(rows_quantity):
                 attachments.append(self._extract_attachment(i))
@@ -328,8 +331,8 @@ class PJeAction(Action[PJePage]):
                 break
 
             self._input_next(self.page.attachments_page_input())
-            self.driver().wait_condition(lambda x: _first_row_changed_predicate(
-                x, self.page.ATTACHMENTS_TABLE_BODY, first_row_text
+            self.driver().wait_condition(lambda x: _last_row_changed_predicate(
+                x, self.page.ATTACHMENTS_TABLE_BODY, last_row_text
             ), timeout=20)
         return attachments
 

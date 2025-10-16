@@ -82,8 +82,9 @@ class TRF5Action(Action[TRF5Page]):
         captcha = self.page.captcha()
         self.driver().scroll_to(captcha)
         image = captcha.screenshot_as_base64
-        code = solve_image_captcha(image)
+        code = solve_image_captcha(image, numeric=1)
         input_el = self.page.captcha_input()
+        self.driver().scroll_to(input_el)
         input_el.clear()
         input_el.send_keys(code)
         self.page.driver.wait_condition(lambda x: self.page.captcha_input().get_attribute('value') == code)
@@ -196,7 +197,9 @@ class TRF5Action(Action[TRF5Page]):
                 created_at, description = list(map(str.strip, description_time.text.split(' - ', maxsplit=1)))
 
                 movements_attachments = []
-                if document.text != '':
+                if document.text != '' and document.find_element(
+                        By.TAG_NAME, 'span'
+                ).get_attribute('class') != 'inativo':
                     document.find_element(By.TAG_NAME, 'a').click()
                     self.driver().wait_windows_greather_than(2)
                     self.page.switch_window()
@@ -262,9 +265,11 @@ class TRF5Action(Action[TRF5Page]):
         case_parties = self._get_case_parties()
         movements, attachments = self._get_movements_and_attachments()
 
-        return DetailedProcessData(
+        detailed = DetailedProcessData(
             process=process_data,
             case_parties=case_parties,
             movements=movements,
             attachments=attachments
         )
+        self.page.close_current_window()
+        return detailed

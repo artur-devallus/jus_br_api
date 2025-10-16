@@ -70,7 +70,6 @@ def finalize_query(results, query_id):
 @celery.task(bind=True, max_retries=5, acks_late=True)
 def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_search: str):
     retries = getattr(self.request, "retries", 0)
-    log.info(f'Received task: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}')
 
     db = SessionLocal()
     if retries >= self.max_retries:
@@ -80,6 +79,11 @@ def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_sear
 
     crawl_task_log: CrawlTaskLog = db.query(CrawlTaskLog).get(crawl_task_log_id)
 
+    log.info(f'Received task: '
+             f'query_id={query_id} '
+             f'crawl_task_log={crawl_task_log_id} '
+             f'tribunal={crawl_task_log.tribunal} '
+             f'term_to_search={term_to_search}')
     try:
         driver = get_driver_singleton()
         results = run_crawler(driver, crawl_task_log.tribunal, term_to_search)
@@ -105,11 +109,19 @@ def crawl_for_tribunal(self, query_id: int, crawl_task_log_id: int, term_to_sear
         if all_crawls_finished(db, query_id):
             update_query_status(db, query_id, QueryStatus.done)
         log.info(
-            f'Task finished: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}'
+            f'Task finished: '
+            f'query_id={query_id} '
+            f'crawl_task_log={crawl_task_log_id} '
+            f'tribunal={crawl_task_log.tribunal} '
+            f'term_to_search={term_to_search}'
         )
     except Exception as exc:
         log.error(
-            f'Task failed: query_id={query_id} crawl_task_log={crawl_task_log_id} term_to_search={term_to_search}',
+            f'Task failed: '
+            f'query_id={query_id} '
+            f'crawl_task_log={crawl_task_log_id} '
+            f'tribunal={crawl_task_log.tribunal} '
+            f'term_to_search={term_to_search}',
             exc_info=exc
         )
         crawl_task_log.status = CrawlStatus.failed

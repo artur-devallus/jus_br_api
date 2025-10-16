@@ -140,11 +140,11 @@ if __name__ == "__main__":
     crawler = PjeTrf1Crawler()
 
     try:
-        try:
-            crawler.query_process_list("052.137.303-45")
-        except LibJusBrException as ex:
-            print(ex.message)
+        # try:
+        #     crawler.query_process_list("052.137.303-45")
+        # except LibJusBrException as ex:
+        #     print(ex.message)
         # print(crawler.query_process_list("10551232120214013700"))
-        print(crawler.detail_process_list('376.263.613-34'))
+        print(crawler.detail_process_list('090.583.703-72'))
     finally:
         crawler.close()

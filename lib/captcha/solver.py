@@ -11,9 +11,9 @@ solver = TwoCaptcha(TWO_CAPTCHA_KEY)
 log = get_logger(__name__)
 
 
-def solve_image_captcha(img_b64_string):
+def solve_image_captcha(img_b64_string, numeric=0):
     log.info('Solving image captcha')
-    result = solver.normal(file=img_b64_string.split(',')[-1])
+    result = solver.normal(file=img_b64_string.split(',')[-1], numeric=numeric)
     code = result.get('code')
     log.info(f'Solved Image: {img_b64_string}')
     log.info(f'Captcha Result: {code}')
