@@ -28,14 +28,21 @@ from lib.webdriver.driver import CustomWebDriver
 log = get_logger(__name__)
 
 
-def _last_row_changed_predicate(driver, id_table, first_row_text):
+def _all_rows_changed_predicate(driver, id_table, all_rows):
     try:
-        current_text = driver.find_element(
+        rows = driver.find_element(
             By.ID, id_table
-        ).find_elements(By.TAG_NAME, 'tr')[-1].find_element(
+        ).find_elements(By.TAG_NAME, 'tr')
+
+        other_rows = [row.find_element(
             By.TAG_NAME, 'td'
-        ).text
-        return first_row_text != current_text
+        ).text for row in rows]
+        if len(other_rows) != len(all_rows):
+            return True
+        for i in range(len(all_rows)):
+            if all_rows[i] != other_rows[i]:
+                return True
+        return False
     except StaleElementReferenceException:
         return False
 
@@ -45,7 +52,7 @@ class PJeAction(Action[PJePage]):
 
     def enter_site(self) -> 'PJeAction':
         if 'Denied' in self.page.driver.title:
-            raise LibJusBrException(f'Access denied for {self.page.driver.current_url}')
+            raise RuntimeError(f'Access denied for {self.page.driver.current_url}')
         self.page.query_process().click()
         self.driver().wait_windows_greather_than(1)
         self.page.close_current_window()
@@ -233,7 +240,7 @@ class PJeAction(Action[PJePage]):
 
         while len(movements) != quantity:
             rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
-            first_row_id = rows[0].find_element(By.TAG_NAME, 'td').id
+            all_rows = [row.find_element(By.TAG_NAME, 'td').text for row in rows]
 
             movements.extend([self._extract_movement(x) for x in rows])
 
@@ -242,8 +249,8 @@ class PJeAction(Action[PJePage]):
 
             self._input_next(self.page.movements_page_input())
 
-            self.driver().wait_condition(lambda x: _last_row_changed_predicate(
-                x, self.page.MOVEMENTS_TABLE_BODY, first_row_id
+            self.driver().wait_condition(lambda x: _all_rows_changed_predicate(
+                x, self.page.MOVEMENTS_TABLE_BODY, all_rows
             ), timeout=20)
 
         return movements
@@ -252,7 +259,7 @@ class PJeAction(Action[PJePage]):
         if 'login' in self.page.driver.current_url:
             log.warning(f'Document {description} needs login to be downloaded')
             return False
-        elif 'Denied' in self.page.driver.title:
+        elif 'denied' in self.page.driver.title.lower() or 'denied' in self.page.driver.current_url.lower():
             log.warning(f'Document {description} access denied')
             return False
         elif 'Consulta pública ·' in self.page.driver.title:
@@ -321,8 +328,8 @@ class PJeAction(Action[PJePage]):
 
         while len(attachments) != quantity:
             rows = self.page.attachments_table_body().find_elements(By.TAG_NAME, 'tr')
+            all_rows = [row.find_element(By.TAG_NAME, 'td').text for row in rows]
             rows_quantity = len(rows)
-            last_row_text = rows[-1].find_element(By.TAG_NAME, 'td').text
 
             for i in range(rows_quantity):
                 attachments.append(self._extract_attachment(i))
@@ -331,8 +338,8 @@ class PJeAction(Action[PJePage]):
                 break
 
             self._input_next(self.page.attachments_page_input())
-            self.driver().wait_condition(lambda x: _last_row_changed_predicate(
-                x, self.page.ATTACHMENTS_TABLE_BODY, last_row_text
+            self.driver().wait_condition(lambda x: _all_rows_changed_predicate(
+                x, self.page.ATTACHMENTS_TABLE_BODY, all_rows
             ), timeout=20)
         return attachments
 
