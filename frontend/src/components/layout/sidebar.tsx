@@ -19,7 +19,7 @@ export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
       <div>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          {!collapsed && <span className="text-xl font-semibold">Gugas ADV</span>}
+          {!collapsed && <span className="text-xl font-semibold">NexaS One</span>}
           <Button
             variant="ghost"
             size="icon"
