@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from db.models.process import Process
 from db.models.query import Query, QueryStatus
 from lib.json_utils import default_json_encoder
+from lib.log_utils import get_logger
+
+log = get_logger(__name__)
 
 
 def create_query(db: Session, user_id: int, term: str):
@@ -44,6 +47,13 @@ def update_query_status(db: Session, query_id: int, status: QueryStatus, result_
 def upsert_process(
         db: Session, query_id: int, crawl_task_log_id: int, tribunal: str, process_number: str, raw_json: dict
 ):
+    log.info(
+        f'upserting process '
+        f'query_id={query_id} '
+        f'crawl_task_log_id={crawl_task_log_id} '
+        f'tribunal={tribunal} '
+        f'process_number={process_number}'
+    )
     p = db.query(Process).filter(
         Process.tribunal == tribunal,
         Process.process_number == process_number

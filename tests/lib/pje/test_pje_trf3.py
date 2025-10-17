@@ -46,4 +46,5 @@ class TestTrf3(unittest.TestCase):
     def test_all(self):
         service = get_trf3_service(self.driver)
 
-        service.get_detailed_processes(term='97613231887', grade='pje1g')
+        service.get_detailed_processes(term='535.920.778-72', grade='pje1g')
+        service.get_detailed_processes(term='535.920.778-72', grade='pje2g')

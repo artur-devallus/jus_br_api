@@ -12,18 +12,12 @@ log = get_logger(__name__)
 
 
 def solve_image_captcha(img_b64_string, numeric=0):
-    log.info('Solving image captcha')
     result = solver.normal(file=img_b64_string.split(',')[-1], numeric=numeric)
     code = result.get('code')
-    log.info(f'Solved Image: {img_b64_string}')
-    log.info(f'Captcha Result: {code}')
     return code
 
 
 def solve_cloudflare_captcha(sitekey, url):
-    log.info('Solving cloudflare captcha')
     result = solver.turnstile(sitekey=sitekey, url=url)
     code = result.get('code')
-    log.info('Solved cloudflare captcha')
-    log.info(f'Captcha Result: {code}')
     return code

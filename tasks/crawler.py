@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List
 
 from celery import chord
+from selenium.common import TimeoutException
 
 from crud.query import upsert_process, update_query_status
 from db.models import QueryStatus
@@ -32,7 +33,7 @@ def enqueue_crawls_for_query(
         force: bool = False,
 ):
     log.info('Crawl for query %s with value %s', query_id, query_type)
-    tribunals = all_tribunals if query_type == 'cpf' else [
+    tribunals = ['trf3'] if query_type == 'cpf' else [
         determine_tribunal_from_process(query_value)
     ]
     tasks = []
@@ -165,21 +166,14 @@ def all_crawls_finished(db, query_id):
 
 
 def _get_for_grade(term, grade, tribunal, driver):
-    all_processes = []
     try:
         log.info(f'running for {tribunal} {grade}')
-        pje_service = get_pje_service_for_tribunal(tribunal=tribunal, driver=driver)
-        try:
-            all_processes.extend(pje_service.get_detailed_processes(
-                term=term, grade=grade
-            ))
-        except LibJusBrException as ex:
-            log.warning(ex.message)
-
+        return get_pje_service_for_tribunal(tribunal=tribunal, driver=driver).get_detailed_processes(
+            term=term, grade=grade
+        )
     except LibJusBrException as ex:
         log.warning(ex.message)
-
-    return all_processes
+        return []
 
 
 def _get_for_eproc(term, grade, tribunal, driver):
@@ -226,19 +220,25 @@ def _get_for_trf5(term, driver):
 
 
 def run_crawler(driver, tribunal, term) -> List[DetailedProcessData]:
-    all_processes = []
-    if tribunal in ['trf1', 'trf3', 'trf6']:
-        for grade in ['pje1g', 'pje2g']:
-            all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
+    try:
+        all_processes = []
+        if tribunal in ['trf1', 'trf3', 'trf6']:
+            for grade in ['pje1g', 'pje2g']:
+                all_processes.extend(_get_for_grade(term, grade, tribunal, driver))
 
-    if tribunal == 'trf2':
-        all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
+        if tribunal == 'trf2':
+            all_processes.extend(_get_for_eproc(term, 'eproc1g', tribunal, driver))
 
-    if tribunal == 'trf5':
-        all_processes.extend(_get_for_trf5(term, driver))
+        if tribunal == 'trf5':
+            all_processes.extend(_get_for_trf5(term, driver))
 
-    if tribunal == 'trf6':
-        for grade in ['eproc1g', 'eproc2g']:
-            all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
+        if tribunal == 'trf6':
+            for grade in ['eproc1g', 'eproc2g']:
+                all_processes.extend(_get_for_eproc(term, grade, tribunal, driver))
 
-    return all_processes
+        log.info(f'found {len(all_processes)} processes')
+
+        return all_processes
+    except TimeoutException as ex:
+        log.error(driver.screenshot())
+        raise ex

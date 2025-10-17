@@ -118,6 +118,7 @@ class PJePage(Page):
         return self.driver.find_by_id(self.MOVEMENT_PAGE_INPUT)
 
     def next_page_button(self):
+        self.driver.wait_clickable_id(self.NEXT_PAGE_BUTTON)
         return self.driver.find_by_id(self.NEXT_PAGE_BUTTON)
 
     def attachments_quantity(self):

@@ -236,13 +236,22 @@ class PJeAction(Action[PJePage]):
          .send_keys(str(next_val))
          .perform())
 
+    def _get_movement_rows_and_text(self):
+        for i in range(3):
+            try:
+                rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
+                all_rows = [row.find_element(By.TAG_NAME, 'td').text for row in rows]
+                return rows, all_rows
+            except StaleElementReferenceException:
+                pass
+        raise RuntimeError('cannot get movement rows')
+
     def _extract_movements(self) -> List[Movement]:
         movements = []
         quantity = self.page.movements_quantity()
         self.driver().scroll_to(self.page.movements_table())
         while len(movements) != quantity:
-            rows = self.page.movements_table().find_elements(By.TAG_NAME, 'tr')
-            all_rows = [row.find_element(By.TAG_NAME, 'td').text for row in rows]
+            rows, all_rows = self._get_movement_rows_and_text()
 
             movements.extend([self._extract_movement(x) for x in rows])
 
