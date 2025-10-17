@@ -10,15 +10,15 @@ const asDetailed = async (
 ) => {
   for (const q of allQueries) {
     const query = await fetchDetailed(q);
-
+    
     for (const proc of query.processes) {
       const wsData: (string | null)[][] = [];
-
+      
       const p = proc.process().process;
       const parties = proc.process().case_parties;
       const movements = proc.process().movements;
       const attachments = proc.process().attachments || [];
-
+      
       // Cabeçalho principal
       wsData.push([""]);
       wsData.push(["📄 DADOS DO PROCESSO"]);
@@ -34,7 +34,7 @@ const asDetailed = async (
       wsData.push(["Data de Distribuição", formatDate(p.distribution_date)]);
       wsData.push(["Juridição", p.jurisdiction || "-"]);
       wsData.push([]);
-
+      
       // Partes ativas
       wsData.push(["⚖️ PARTES ATIVAS"]);
       wsData.push(["────────────────────────────"]);
@@ -46,7 +46,7 @@ const asDetailed = async (
         );
         wsData.push([]);
       });
-
+      
       // Partes passivas
       wsData.push(["⚖️ PARTES PASSIVAS"]);
       wsData.push(["────────────────────────────"]);
@@ -58,7 +58,7 @@ const asDetailed = async (
         );
         wsData.push([]);
       });
-
+      
       // Movimentações
       wsData.push(["📜 MOVIMENTAÇÕES"]);
       wsData.push(["────────────────────────────"]);
@@ -77,7 +77,7 @@ const asDetailed = async (
         }
         wsData.push([]);
       });
-
+      
       // Anexos gerais
       wsData.push(["📎 ANEXOS GERAIS"]);
       wsData.push(["────────────────────────────"]);
@@ -90,11 +90,11 @@ const asDetailed = async (
           a.protocol_md5 || "-",
         ]);
       });
-
+      
       // Definição da planilha
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws["!cols"] = [{wch: 45}, {wch: 55}, {wch: 25}, {wch: 25}];
-
+      
       const sheetName = sanitizeSheetName(`${proc.activePartyAuthorCpf()} - ${p.process_number}`);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
@@ -103,10 +103,11 @@ const asDetailed = async (
 const asSimple = async (
   wb: XLSX.WorkBook,
   allQueries: number[],
-  fetchDetailed: (id: number) => Promise<Query>
+  fetchDetailed: (id: number) => Promise<Query>,
+  tribunal?: string
 ) => {
   const wsData: (string | null)[][] = [];
-
+  
   wsData.push([
     'CPF Busca',
     "Número do Processo",
@@ -122,13 +123,17 @@ const asSimple = async (
     'Primeira movimentação',
   ])
   ;
-
+  
   for (const q of allQueries) {
     const query = await fetchDetailed(q);
-
+    
     for (const proc of query.processes) {
       const p = proc.process().process;
-
+      
+      if (tribunal && proc.tribunal() && tribunal.toUpperCase() !== proc.tribunal()) {
+        continue;
+      }
+      
       wsData.push([
         formatCpfOrProcess(query.query_value),
         p.process_number,
@@ -145,7 +150,7 @@ const asSimple = async (
       ]);
     }
   }
-
+  
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws["!cols"] = [
     {wch: 40},
@@ -160,7 +165,7 @@ const asSimple = async (
     {wch: 65},
     {wch: 65},
   ];
-
+  
   XLSX.utils.book_append_sheet(wb, ws, "Processos");
 };
 
@@ -172,15 +177,16 @@ export async function exportAllProcessesToExcel(
   allQueries: number[],
   fetchDetailed: (id: number) => Promise<Query>,
   fileName?: string,
-  mode: 'single' | 'detailed' = 'single'
+  mode: 'single' | 'detailed' = 'single',
+  tribunal?: string,
 ) {
   const wb = XLSX.utils.book_new();
   if (mode === 'detailed') {
     await asDetailed(wb, allQueries, fetchDetailed);
   } else {
-    await asSimple(wb, allQueries, fetchDetailed);
+    await asSimple(wb, allQueries, fetchDetailed, tribunal);
   }
-
+  
   const wbout = XLSX.write(wb, {bookType: "xlsx", type: "array"});
   const blob = new Blob([wbout], {type: "application/octet-stream"});
   const link = document.createElement("a");

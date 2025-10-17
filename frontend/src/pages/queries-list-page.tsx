@@ -85,7 +85,7 @@ export default function QueriesListPage() {
         },
       });
       const ids = allQueries.map((q: Query) => q.id);
-      await exportAllProcessesToExcel(ids, detail);
+      await exportAllProcessesToExcel(ids, detail, tribunal === 'ALL' ? undefined : tribunal);
     } finally {
       setIsExportingAll(false);
     }
