@@ -33,7 +33,7 @@ def enqueue_crawls_for_query(
         force: bool = False,
 ):
     log.info('Crawl for query %s with value %s', query_id, query_type)
-    tribunals = ['trf3'] if query_type == 'cpf' else [
+    tribunals = all_tribunals if query_type == 'cpf' else [
         determine_tribunal_from_process(query_value)
     ]
     tasks = []
