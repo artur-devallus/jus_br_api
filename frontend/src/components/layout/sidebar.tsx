@@ -32,38 +32,7 @@ export default function Sidebar({onLogout, onNavigate}: SidebarProps) {
 
         {/* Menu */}
         <nav className="mt-4 flex flex-col gap-1 px-3">
-          <Button
-            variant="ghost"
-            className={`justify-start gap-2 ${
-              collapsed ? "justify-center px-0" : ""
-            }`}
-            onClick={() => onNavigate?.("/app")}
-          >
-            <Search size={18}/>
-            {!collapsed && <span>Consultas</span>}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className={`justify-start gap-2 ${
-              collapsed ? "justify-center px-0" : ""
-            }`}
-            onClick={() => onNavigate?.("/app/import-file")}
-          >
-            <Import size={18}/>
-            {!collapsed && <span>Importar Arquivo</span>}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className={`justify-start gap-2 ${
-              collapsed ? "justify-center px-0" : ""
-            }`}
-            onClick={() => onNavigate?.("/app/queries-list")}
-          >
-            <TextSearch size={18}/>
-            {!collapsed && <span>Histórico</span>}
-          </Button>
+        
         </nav>
       </div>
       {/* Logout */}

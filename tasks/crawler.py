@@ -168,8 +168,8 @@ def all_crawls_finished(db, query_id):
 def _get_for_grade(term, grade, tribunal, driver):
     try:
         log.info(f'running for {tribunal} {grade}')
-        return get_pje_service_for_tribunal(tribunal=tribunal, driver=driver).get_detailed_processes(
-            term=term, grade=grade
+        return get_pje_service_for_tribunal(driver=driver, tribunal=tribunal, grade=grade).get_detailed_processes(
+            term=term
         )
     except LibJusBrException as ex:
         log.warning(ex.message)

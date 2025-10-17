@@ -1,7 +1,9 @@
 import dataclasses
+from typing import List
 
 from lib.exceptions import LibJusBrException
 from lib.log_utils import get_logger
+from lib.models import DetailedProcessData
 from lib.pje.action import PJeAction
 from lib.pje.constants import URLS
 from lib.pje.page import TRF1PJePage, TRF3PJePage, TRF6PJePage
@@ -15,18 +17,22 @@ logger = get_logger(__name__)
 @dataclasses.dataclass(frozen=True)
 class PJeService(Service[PJeAction]):
     tribunal: TribunalPje = dataclasses.field()
+    grade: Grade = dataclasses.field()
 
-    def _get_proper_url(self, grade: Grade) -> str:
+    def __post_init__(self):
+        if self.grade:
+            self.go_to(self._get_proper_url())
+
+    def _get_proper_url(self, ) -> str:
         try:
-            return URLS[self.tribunal][grade]
+            return URLS[self.tribunal][self.grade]
         except KeyError:
-            raise LibJusBrException(f'cannot find PJE Url for tribunal {self.tribunal} and grade {grade}')
+            raise LibJusBrException(f'cannot find PJE Url for tribunal {self.tribunal} and grade {self.grade}')
 
     def get_process_list(
-            self, term: str, grade: Grade
+            self, term: str,
     ):
         logger.info(f'Starting get simple process data for term {term}')
-        self.go_to(self._get_proper_url(grade))
         simple_data = (
             self
             .action
@@ -37,26 +43,10 @@ class PJeService(Service[PJeAction]):
         logger.info(f'Finished get simple process data for term {term}')
         return simple_data
 
-    def get_detailed_process(
-            self, term: str, grade: Grade, process_index_or_number: str | int = 0
-    ):
-        logger.info(f'Starting get detailed process data for term {term}')
-        self.go_to(self._get_proper_url(grade))
-        data = (
-            self
-            .action
-            .enter_site()
-            .search_term(term)
-            .extract_detailed_process(process_index_or_number)
-        )
-        logger.info(f'Finished get detailed process data for term {term}')
-        return data
-
     def get_detailed_processes(
-            self, term: str, grade: Grade
-    ):
+            self, term: str,
+    ) -> List[DetailedProcessData]:
         logger.info(f'Starting get detailed process data for term {term}')
-        self.go_to(self._get_proper_url(grade))
         data = (
             self
             .action
@@ -68,24 +58,27 @@ class PJeService(Service[PJeAction]):
         return data
 
 
-def get_trf1_service(d: CustomWebDriver) -> PJeService:
+def get_trf1_service(d: CustomWebDriver, grade: Grade = 'pje1g') -> PJeService:
     return PJeService(
         action=PJeAction(TRF1PJePage(driver=d)),
         tribunal='trf1',
+        grade=grade
     )
 
 
-def get_trf3_service(d: CustomWebDriver) -> PJeService:
+def get_trf3_service(d: CustomWebDriver, grade: Grade = 'pje1g') -> PJeService:
     return PJeService(
         action=PJeAction(TRF3PJePage(driver=d)),
-        tribunal='trf3'
+        tribunal='trf3',
+        grade=grade
     )
 
 
-def get_trf6_service(d: CustomWebDriver) -> PJeService:
+def get_trf6_service(d: CustomWebDriver, grade: Grade = 'pje1g') -> PJeService:
     return PJeService(
         action=PJeAction(TRF6PJePage(driver=d)),
-        tribunal='trf6'
+        tribunal='trf6',
+        grade=grade
     )
 
 
@@ -99,5 +92,7 @@ def get_action_for_tribunal(tribunal: TribunalPje, driver):
     raise LibJusBrException(f'cannot get PJe Service for tribunal {tribunal}')
 
 
-def get_pje_service_for_tribunal(tribunal: TribunalPje, driver: CustomWebDriver) -> PJeService:
-    return PJeService(get_action_for_tribunal(tribunal=tribunal, driver=driver), tribunal)
+def get_pje_service_for_tribunal(
+        tribunal: TribunalPje, driver: CustomWebDriver, grade: Grade
+) -> PJeService:
+    return PJeService(get_action_for_tribunal(tribunal=tribunal, driver=driver), tribunal, grade)
