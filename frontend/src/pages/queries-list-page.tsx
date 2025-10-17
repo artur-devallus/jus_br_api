@@ -24,6 +24,7 @@ import {exportAllProcessesToExcel} from "@/lib/export-process-utils";
 async function fetchQueries(params: {
   query_value?: string;
   result_process_count_ge?: number;
+  tribunal?: string;
   page?: number;
   size?: number;
 }): Promise<Query[]> {
@@ -41,6 +42,7 @@ export default function QueriesListPage() {
   const [queryValue, setQueryValue] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [withMovements, setWithMovements] = useState(false);
+  const [tribunal, setTribunal] = useState("ALL");
   const [page, setPage] = useState(1);
   const [isExportingAll, setIsExportingAll] = useState(false);
 
@@ -50,17 +52,18 @@ export default function QueriesListPage() {
     return () => clearTimeout(timer);
   }, [queryValue]);
 
-  // reset page ao mudar filtro
+  // reset page ao mudar filtros
   useEffect(() => {
     setPage(1);
-  }, [withMovements]);
+  }, [withMovements, tribunal]);
 
   const {data, isFetching, isLoading} = useQuery({
-    queryKey: ["queries", {queryValue: debouncedQuery, withMovements, page}],
+    queryKey: ["queries", {queryValue: debouncedQuery, withMovements, tribunal, page}],
     queryFn: () =>
       fetchQueries({
         query_value: debouncedQuery || undefined,
         result_process_count_ge: withMovements ? 1 : undefined,
+        tribunal: tribunal !== "ALL" ? tribunal : undefined,
         page,
         size: 10,
       }),
@@ -75,7 +78,11 @@ export default function QueriesListPage() {
     try {
       setIsExportingAll(true);
       const {data: allQueries} = await api.get("/v1/queries", {
-        params: {size: 1000, result_process_count_ge: 1},
+        params: {
+          size: 1000,
+          result_process_count_ge: 1,
+          tribunal: tribunal !== "ALL" ? tribunal : undefined,
+        },
       });
       const ids = allQueries.map((q: Query) => q.id);
       await exportAllProcessesToExcel(ids, detail);
@@ -142,6 +149,20 @@ export default function QueriesListPage() {
             <span>Com movimentações</span>
           </div>
 
+          <select
+            value={tribunal}
+            onChange={(e) => setTribunal(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="ALL">Todos</option>
+            <option value="TRF1">TRF1</option>
+            <option value="TRF2">TRF2</option>
+            <option value="TRF3">TRF3</option>
+            <option value="TRF4">TRF4</option>
+            <option value="TRF5">TRF5</option>
+            <option value="TRF6">TRF6</option>
+          </select>
+
           <Button
             variant="outline"
             onClick={exportAll}
@@ -185,7 +206,7 @@ export default function QueriesListPage() {
                   </TableCell>
                   <TableCell>{q.result_process_count}</TableCell>
                   <TableCell>{displayStatus(q)}</TableCell>
-                  <TableCell>{new Date(q.created_at).toLocaleString('pt-BR')}</TableCell>
+                  <TableCell>{new Date(q.created_at).toLocaleString("pt-BR")}</TableCell>
                   <TableCell className="flex gap-2">
                     <Button
                       variant="ghost"

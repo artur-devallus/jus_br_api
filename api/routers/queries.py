@@ -1,11 +1,13 @@
 import gzip
 import json
+from typing import List, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from api.deps import get_current_user
 from crud.query import create_query, get_query_by_term, update_query_status
+from db.models import Process, CrawlTaskLog
 from db.models.query import Query as QueryModel, QueryStatus
 from db.session import get_db
 from schemas.query import (
@@ -48,6 +50,7 @@ def list_queries(
         db: Session = Depends(get_db),
         query_value: str = QueryParam(None, max_length=20, min_length=11),
         result_process_count_ge: int = QueryParam(None, ge=0),
+        tribunal: str = QueryParam(None, max_length=4, min_length=4),
         page: int = QueryParam(1, ge=1),
         size: int = QueryParam(20, ge=1, le=1000),
 ):
@@ -59,13 +62,33 @@ def list_queries(
     if query_value is not None:
         query = query.filter(QueryModel.query_value == query_value)
 
-    if result_process_count_ge is not None:
+    if tribunal is not None:
+        queries = db.query(
+            Process
+        ).filter(
+            Process.tribunal == tribunal
+        ).options(load_only(
+            Process.query_id
+        )).all()
+        query = query.filter(QueryModel.id.in_([x.query_id for x in queries]))
+    elif result_process_count_ge is not None:
         query = query.filter(QueryModel.result_process_count >= result_process_count_ge)
 
-    results = query.offset((page - 1) * size).limit(size).all()
+    results: List[Any] = query.order_by(QueryModel.id.desc()).offset((page - 1) * size).limit(size).all()
 
     return [
-        QueryOut.model_validate(q) for q in results
+        QueryOut(
+            id=q.id,
+            query_type=q.query_type,
+            query_value=q.query_value,
+            created_at=q.created_at,
+            status=q.status,
+            result_process_count=(
+                q.result_process_count if tribunal is None else db.query(Process).filter(
+                    Process.query_id == q.id, Process.tribunal == tribunal
+                ).count()
+            ),
+        ) for q in results
     ]
 
 
