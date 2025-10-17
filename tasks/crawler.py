@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List
 
 from celery import chord
-from selenium.common import TimeoutException
+from selenium.common import WebDriverException
 
 from crud.query import upsert_process, update_query_status
 from db.models import QueryStatus
@@ -239,6 +239,6 @@ def run_crawler(driver, tribunal, term) -> List[DetailedProcessData]:
         log.info(f'found {len(all_processes)} processes')
 
         return all_processes
-    except TimeoutException as ex:
+    except WebDriverException as ex:
         log.error(driver.screenshot())
         raise ex
