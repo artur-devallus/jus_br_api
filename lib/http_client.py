@@ -1,6 +1,18 @@
 from urllib.parse import urlparse
 
 import httpx
+from tenacity import retry, wait_exponential, retry_if_exception_type, retry_if_exception
+
+FORBIDDEN_CODE = 403
+_retry_forbidden = retry_if_exception(
+    lambda ex: isinstance(ex, httpx.HTTPStatusError) and ex.response.status_code == FORBIDDEN_CODE
+)
+
+_retry = (
+        _retry_forbidden |
+        retry_if_exception_type(httpx.ReadError) |
+        retry_if_exception_type(httpx.ConnectError)
+)
 
 
 class HttpClient:
@@ -17,7 +29,7 @@ class HttpClient:
             follow_redirects=True,
             timeout=timeout,
             event_hooks=dict(
-                request=[self.add_host, self.log_request],
+                request=[self._add_headers, self.log_request],
             ),
             mounts={
                 'http://': httpx.HTTPTransport(proxy=proxy),
@@ -29,7 +41,7 @@ class HttpClient:
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/141.0.0.0 Safari/537.36"
                 ),
-                "Accept": "*",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Accept-Encoding": "gzip, deflate, br, zstd",
                 "Connection": "keep-alive",
@@ -37,21 +49,17 @@ class HttpClient:
             },
         )
 
+    @retry(wait=wait_exponential(multiplier=0.5, max=3), retry=_retry)
     def get(self, url: str, **kwargs) -> httpx.Response:
-        last_ex = None
-        for i in range(3):
-            try:
-                return self.session.get(url, **kwargs)
-            except httpx.ReadError as ex:
-                last_ex = ex
-        raise last_ex
+        res = self.session.get(url, **kwargs)
+        if res.is_error:
+            res.raise_for_status()
+        return res
 
+    @retry(wait=wait_exponential(multiplier=0.5, max=3), retry=_retry)
     def post(self, url: str, data: dict | str | None = None, **kwargs) -> httpx.Response:
         res = self.session.post(url, data=data, **kwargs)
         if res.is_error:
-            print(url)
-            print(data)
-            print(kwargs)
             res.raise_for_status()
         return res
 
@@ -59,8 +67,12 @@ class HttpClient:
         self.session.close()
 
     @classmethod
-    def add_host(cls, request: httpx.Request) -> None:
+    def _add_headers(cls, request: httpx.Request) -> None:
         request.headers['Host'] = str(urlparse(str(request.url)).netloc)
+        request.headers['cache-control'] = 'no-cache'
+        request.headers['dnt'] = '1'
+        request.headers['pragma'] = 'no-cache'
+        request.headers['priority'] = 'u=0, i'
         request.headers['sec-ch-ua'] = '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"'
         request.headers['sec-ch-ua-mobile'] = '?0'
         request.headers['sec-ch-ua-platform'] = 'Linux'
@@ -74,3 +86,9 @@ class HttpClient:
             return
         print(request.url)
         print(request.headers)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

@@ -1,5 +1,6 @@
 alembic==1.17.0
 bcrypt==4.3.0
+brotli==1.1.0
 beautifulsoup4==4.14.2
 cryptography==46.0.2
 celery==5.5.3
@@ -18,3 +19,4 @@ pymysql==1.1.2
 python_jose==3.5.0
 redis==6.4.0
 sqlalchemy==2.0.44
+tenacity==9.1.2

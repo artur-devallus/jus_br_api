@@ -4,18 +4,15 @@ from typing import List
 
 from bs4 import BeautifulSoup
 
-from lib.json_utils import default_json_encoder
+from lib.json_utils import default_json_encoder, json_dump
 from lib.models import Party
 from lib.pje.base_pje_crawler import BasePjeCrawler
-from lib.proxy.proxies import fastest_proxy
 
 
-class PjeTrf3Crawler(BasePjeCrawler):
-    BASE_URL = "https://pje1g.trf3.jus.br"
+class _PjeTrf3Crawler(BasePjeCrawler):
     QUERY_PATH = "/pje/ConsultaPublica/listView.seam"
     DETAIL_PATH = "/pje/ConsultaPublica/DetalheProcessoConsultaPublica/listView.seam"
 
-    SELECTOR_PROCESS_DATA = 'div#j_id145\\:processoTrfViewView\\:j_id148_body > table > tbody > tr > td > span'
 
     ACTIVE_PARTY_BINDING = 'j_id145:processoPartesPoloAtivoResumidoList:j_id336'
     PASSIVE_PARTY_BINDING = 'j_id145:processoPartesPoloPassivoResumidoList:j_id400'
@@ -35,29 +32,21 @@ class PjeTrf3Crawler(BasePjeCrawler):
         return []
 
 
+class Pje1GTrf3Crawler(_PjeTrf3Crawler):
+    BASE_URL = "https://pje1g.trf3.jus.br"
+
+
+class Pje2GTrf3Crawler(_PjeTrf3Crawler):
+    BASE_URL = "https://pje2g.trf3.jus.br"
+
+
 if __name__ == "__main__":
-    crawler = PjeTrf3Crawler(
-        proxy=fastest_proxy("https://pje1g.trf3.jus.br")
-    )
+    crawler_1g = Pje1GTrf3Crawler(use_proxy=True)
+    crawler_2g = Pje2GTrf3Crawler(use_proxy=True)
 
     try:
-        # try:
-        #     crawler.query_process_list("052.137.303-45")
-        # except LibJusBrException as ex:
-        #     print(ex.message)
-        data = crawler.detail_process_list("0009022-07.2002.4.03.6301")
-        for o in data:
-            print(json.dumps(
-                dataclasses.asdict(o),
-                default=default_json_encoder,
-                indent=2
-            ))
-        data = crawler.detail_process_list('535.920.778-72')
-        for o in data:
-            print(json.dumps(
-                dataclasses.asdict(o),
-                default=default_json_encoder,
-                indent=2
-            ))
+        json_dump(crawler_1g.detail_process_list('535.920.778-72'))
+        json_dump(crawler_2g.detail_process_list('535.920.778-72'))
     finally:
-        crawler.close()
+        crawler_1g.close()
+        crawler_2g.close()

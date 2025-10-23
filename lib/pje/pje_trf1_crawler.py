@@ -1,13 +1,10 @@
+from lib.json_utils import json_dump
 from lib.pje.base_pje_crawler import BasePjeCrawler
 
 
-class PjeTrf1Crawler(BasePjeCrawler):
-    BASE_URL = "https://pje1g.trf1.jus.br"
-
+class _PjeTrf1Crawler(BasePjeCrawler):
     QUERY_PATH = "/consultapublica/ConsultaPublica/listView.seam"
     DETAIL_PATH = "/consultapublica/ConsultaPublica/DetalheProcessoConsultaPublica/listView.seam"
-
-    SELECTOR_PROCESS_DATA = 'div#j_id136\\:processoTrfViewView\\:j_id139_body > table > tbody > tr > td > span'
 
     ACTIVE_PARTY_BINDING = 'j_id136:processoPartesPoloAtivoResumidoTableBinding:j_id325'
     PASSIVE_PARTY_BINDING = 'j_id136:processoPartesPoloPassivoResumidoTableBinding:j_id390'
@@ -25,15 +22,21 @@ class PjeTrf1Crawler(BasePjeCrawler):
         return body
 
 
+class Pje1GTrf1Crawler(_PjeTrf1Crawler):
+    BASE_URL = "https://pje1g.trf1.jus.br"
+
+
+class Pje2GTrf1Crawler(_PjeTrf1Crawler):
+    BASE_URL = "https://pje2g.trf1.jus.br"
+
+
 if __name__ == "__main__":
-    crawler = PjeTrf1Crawler()
+    crawler_1g = Pje1GTrf1Crawler(use_proxy=True)
+    crawler_2g = Pje2GTrf1Crawler(use_proxy=True)
 
     try:
-        # try:
-        #     crawler.query_process_list("052.137.303-45")
-        # except LibJusBrException as ex:
-        #     print(ex.message)
-        # print(crawler.query_process_list("10551232120214013700"))
-        print(crawler.detail_process_list('13132434850'))
+        json_dump(crawler_1g.detail_process_list('13132434850'))
+        json_dump(crawler_2g.detail_process_list('13132434850'))
     finally:
-        crawler.close()
+        crawler_1g.close()
+        crawler_2g.close()

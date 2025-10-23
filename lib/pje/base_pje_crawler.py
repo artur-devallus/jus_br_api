@@ -1,6 +1,7 @@
+import time
 import warnings
 from abc import ABC
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from urllib.parse import urljoin
 
 import bs4
@@ -11,6 +12,7 @@ from lib.date_utils import to_date, to_date_time
 from lib.exceptions import LibJusBrException
 from lib.format_utils import format_cpf, format_process_number
 from lib.http_client import HttpClient
+from lib.log_utils import get_logger
 from lib.models import (
     SimpleProcessData,
     DetailedProcessData,
@@ -21,19 +23,23 @@ from lib.models import (
     DocumentParty,
     MovementAttachment
 )
+from lib.proxy.proxies import proxy_service
 from lib.string_utils import only_digits
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+
+log = get_logger('pje_crawler')
 
 
 class BasePjeCrawler(ABC):
     BASE_URL: str
     QUERY_PATH: str
     DETAIL_PATH: str
+    DELAY_SECONDS: int = 0.75
 
     SELECTOR_TABLE_CONTAINER: str = 'div#fPP\\:processosGridPanel_body'
     SELECTOR_TABLE_ROWS: str = 'tbody#fPP\\:processosTable\\:tb > tr'
-    SELECTOR_PROCESS_DATA: str
+    SELECTOR_PROCESS_DATA = 'table > tbody > tr > td > span'
 
     TABLE_MOVEMENTS_PATTERN: str = ':processoEvento:tb'
 
@@ -60,16 +66,23 @@ class BasePjeCrawler(ABC):
     MOVEMENT_AJAX_REQUEST: str
     MOVEMENT_AJAX_BINDING: str
 
-    def __init__(self, proxy: Optional[str] = None, enable_logs: bool = False):
+    def __init__(self, use_proxy: bool = False):
+        if use_proxy:
+            proxy = proxy_service.get_fastest_proxy(self.BASE_URL)
+        else:
+            proxy = None
         self.http = HttpClient(
             self.BASE_URL,
-            enable_logs=enable_logs,
             proxy=proxy
         )
-        if proxy:
-            self.http.session.proxies = {"https": proxy, "http": proxy}
         self._init_session()
         self._view_state = 'j_id1'
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def query_process_list(self, term: str) -> List[SimpleProcessData]:
         soup = self._get_query_soup(term)
@@ -107,11 +120,15 @@ class BasePjeCrawler(ABC):
     def _post_query_detail(self, referer, data) -> BeautifulSoup:
         url = urljoin(self.BASE_URL, self.DETAIL_PATH)
         headers = self._build_headers(referer)
+        self._delay()
         response = self.http.post(url, data=data, headers=headers)
 
         soup = BeautifulSoup(response.text, 'lxml')
         self._update_view_state(soup)
         return soup
+
+    def _delay(self):
+        time.sleep(self.DELAY_SECONDS)
 
     def _build_headers(self, referer: str) -> Dict[str, str]:
         return {
@@ -174,7 +191,10 @@ class BasePjeCrawler(ABC):
         return text
 
     def _extract_process_data(self, soup: BeautifulSoup) -> ProcessData:
-        span_tags = soup.select(self.SELECTOR_PROCESS_DATA)
+        div = next(
+            (x for x in soup.find_all('div', id=True) if 'processoTrfView' in x['id'] and 'body' in x['id'])
+        )
+        span_tags = div.select(self.SELECTOR_PROCESS_DATA)
         span_dict = {
             tg.select_one('div > div.name').text.strip(): tg.select_one('div > div.value').text.strip()
             for tg in span_tags
@@ -310,7 +330,6 @@ class BasePjeCrawler(ABC):
 
             last_rows = tmp_rows
             all_parties.extend(tmp_rows)
-            print(f'finished active party page {page}')
             if len(tmp_rows) < 10:
                 break
             page += 1
@@ -340,9 +359,13 @@ class BasePjeCrawler(ABC):
         )
 
     def _extract_case_parties(self, soup: BeautifulSoup, url) -> CaseParty:
+        active = self._extract_active_party(soup, url)
+        assert len(active) > 0
+        passive = self._extract_passive_party(soup, url)
+        assert len(passive) > 0
         return CaseParty(
-            active=self._extract_active_party(soup, url),
-            passive=self._extract_passive_party(soup, url),
+            active=active,
+            passive=passive,
             others=self._extract_other_party(soup, url),
         )
 
@@ -364,7 +387,6 @@ class BasePjeCrawler(ABC):
 
             last_rows = tmp_rows
             all_movements.extend(tmp_rows)
-            print(f'finished movements page {page}')
 
             if len(tmp_rows) < 15:
                 break
