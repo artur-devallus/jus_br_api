@@ -56,12 +56,20 @@ class Party:
     name: str = dataclasses.field()
     role: str | None = dataclasses.field()
     documents: List[DocumentParty] = dataclasses.field(default_factory=list)
+    other_name: str | None = dataclasses.field(default=None)
+
+    def __hash__(self):
+        return hash(self.name + self.documents[0].value if len(self.documents) else '')
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()
 
 
 @dataclasses.dataclass(frozen=True)
 class CaseParty:
     active: List[Party] = dataclasses.field(default_factory=list)
     passive: List[Party] = dataclasses.field(default_factory=list)
+    others: List[Party] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(frozen=True)

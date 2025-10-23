@@ -1,8 +1,10 @@
+from urllib.parse import urlparse
+
 import httpx
 
 
 class HttpClient:
-    def __init__(self, base_url: str | None = None, timeout: int = 60, enable_logs: bool = False):
+    def __init__(self, base_url: str | None = None, timeout: int = 30, enable_logs: bool = False):
         self.base_url = base_url.rstrip("/") if base_url else None
         self.enable_logs = enable_logs
         self.session: httpx.Client = httpx.Client(
@@ -10,21 +12,19 @@ class HttpClient:
             follow_redirects=True,
             timeout=timeout,
             event_hooks=dict(
-                request=[self.log_request],
+                request=[self.add_host, self.log_request],
             ),
             headers={
                 "User-Agent": (
-                    "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) "
+                    "Mozilla/5.0 (X11; Linux x86_64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/141.0.0.0 Mobile Safari/537.36"
+                    "Chrome/141.0.0.0 Safari/537.36"
                 ),
-                "Accept": "*/*",
+                "Accept": "*",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "DNT": "1",
-                "Pragma": "no-cache",
+                'Upgrade-Insecure-Requests': '1',
             },
         )
 
@@ -32,10 +32,23 @@ class HttpClient:
         return self.session.get(url, **kwargs)
 
     def post(self, url: str, data: dict | str | None = None, **kwargs) -> httpx.Response:
-        return self.session.post(url, data=data, **kwargs)
+        res = self.session.post(url, data=data, **kwargs)
+        res.raise_for_status()
+        return res
 
     def close(self):
         self.session.close()
+
+    @classmethod
+    def add_host(cls, request: httpx.Request) -> None:
+        request.headers['Host'] = str(urlparse(str(request.url)).netloc)
+        request.headers['sec-ch-ua'] = '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"'
+        request.headers['sec-ch-ua-mobile'] = '?0'
+        request.headers['sec-ch-ua-platform'] = 'Linux'
+        request.headers['sec-fetch-dest'] = 'document'
+        request.headers['sec-fetch-mode'] = 'navigate'
+        request.headers['sec-fetch-site'] = 'none'
+        request.headers['sec-fetch-user'] = '?1'
 
     def log_request(self, request: httpx.Request) -> None:
         if not self.enable_logs:

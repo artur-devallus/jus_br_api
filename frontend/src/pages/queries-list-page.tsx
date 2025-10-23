@@ -100,25 +100,25 @@ export default function QueriesListPage() {
       case "queued":
         return (
           <span className="flex items-center gap-1 text-blue-600 font-medium">
-            <Clock size={14} /> Em fila
+            <Clock size={14}/> Em fila
           </span>
         );
       case "running":
         return (
           <span className="flex items-center gap-1 text-amber-600 font-medium">
-            <Loader2 size={14} className="animate-spin" /> Processando
+            <Loader2 size={14} className="animate-spin"/> Processando
           </span>
         );
       case "failed":
         return (
           <span className="flex items-center gap-1 text-red-600 font-medium">
-            <AlertCircle size={14} /> Erro
+            <AlertCircle size={14}/> Erro
           </span>
         );
       case "done":
         return (
           <span className="flex items-center gap-1 text-green-600 font-medium">
-            <CheckCircle size={14} /> Concluído
+            <CheckCircle size={14}/> Concluído
           </span>
         );
       default:
@@ -169,7 +169,7 @@ export default function QueriesListPage() {
             disabled={isExportingAll}
             className="w-full sm:w-auto flex items-center justify-center gap-2"
           >
-            {isExportingAll && <Loader2 size={16} className="animate-spin" />}
+            {isExportingAll && <Loader2 size={16} className="animate-spin"/>}
             {isExportingAll ? "Exportando..." : "Exportar tudo"}
           </Button>
         </div>
@@ -178,7 +178,7 @@ export default function QueriesListPage() {
         {(isLoading || (isFetching && !data)) && (
           <div className="flex flex-col gap-2 mt-4">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
+              <Skeleton key={i} className="h-10 w-full"/>
             ))}
           </div>
         )}
@@ -200,7 +200,7 @@ export default function QueriesListPage() {
                 <TableRow key={q.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {isFetching && <Loader2 size={14} className="animate-spin text-gray-400" />}
+                      {isFetching && <Loader2 size={14} className="animate-spin text-gray-400"/>}
                       {formatCpfOrProcess(q.query_value)}
                     </div>
                   </TableCell>
@@ -213,10 +213,10 @@ export default function QueriesListPage() {
                       size="icon"
                       onClick={() => window.open(`/app?query_value=${q.query_value}`, "_blank")}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLink className="h-4 w-4"/>
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => exportOne(q)}>
-                      <Download className="h-4 w-4" />
+                      <Download className="h-4 w-4"/>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -234,7 +234,7 @@ export default function QueriesListPage() {
               disabled={page === 1 || isFetching}
               onClick={() => setPage((p) => p - 1)}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={18}/>
             </Button>
             <span>Página {page}</span>
             <Button
@@ -243,7 +243,7 @@ export default function QueriesListPage() {
               disabled={isFetching || data.length < 10}
               onClick={() => setPage((p) => p + 1)}
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={18}/>
             </Button>
           </div>
         )}

@@ -1,139 +1,61 @@
-from typing import List
-from urllib.parse import urljoin
+from typing import Dict, Any, List
 
 from bs4 import BeautifulSoup
 
 from lib.date_utils import to_date_time
-from lib.exceptions import LibJusBrException
-from lib.format_utils import format_process_number, format_cpf
-from lib.http_client import HttpClient
-from lib.models import SimpleProcessData, DetailedProcessData
+from lib.format_utils import format_cpf, format_process_number
+from lib.models import Movement
+from lib.pje.base_pje_crawler import BasePjeCrawler
 from lib.string_utils import only_digits
 
 
-class PjeTrf1Crawler:
+class PjeTrf1Crawler(BasePjeCrawler):
     BASE_URL = "https://pje1g.trf1.jus.br"
+    QUERY_PATH = "/consultapublica/ConsultaPublica/listView.seam"
+    DETAIL_PATH = "/consultapublica/ConsultaPublica/DetalheProcessoConsultaPublica/listView.seam"
 
-    def __init__(self):
-        self._http = HttpClient(self.BASE_URL)
-        self._start()
+    SELECTORS = {
+        'table_container': "div#fPP\\:processosGridPanel_body",
+        'table_rows': "tbody#fPP\\:processosTable\\:tb > tr",
+        'viewstate': "input[name='javax.faces.ViewState']",
+        'process_data': 'div#j_id136\\:processoTrfViewView\\:j_id139_body > table > tbody > tr > td > span'
+    }
 
-    def _start(self):
-        self._enter_site()
-        self._access_login()
-        self._sso_auth()
-        self._enter_public_query()
+    QUERY_BODY_TEMPLATE = {
+        "AJAXREQUEST": "_viewRoot",
+        "fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso": "",
+        "mascaraProcessoReferenciaRadio": "on",
+        "fPP:j_id152:processoReferenciaInput": "",
+        "fPP:dnp:nomeParte": "",
+        "fPP:j_id170:nomeAdv": "",
+        "fPP:j_id179:classeProcessualProcessoHidden": "",
+        "tipoMascaraDocumento": "on",
+        "fPP:dpDec:documentoParte": "",
+        "fPP:Decoration:numeroOAB": "",
+        "fPP:Decoration:j_id214": "",
+        "fPP:Decoration:estadoComboOAB": "org.jboss.seam.ui.NoSelectionConverter.noSelectionValue",
+        "fPP": "fPP",
+        "autoScroll": "",
+        "javax.faces.ViewState": "j_id1",
+        "fPP:j_id220": "fPP:j_id220",
+        "AJAX:EVENTS_COUNT": "1"
+    }
 
-    def _enter_site(self):
-        r = self._http.get("/")
-        return r.url
+    ACTIVE_PARTY_BINDING = 'j_id136:processoPartesPoloAtivoResumidoTableBinding:j_id325'
+    PASSIVE_PARTY_BINDING = 'j_id136:processoPartesPoloPassivoResumidoTableBinding:j_id390'
+    OTHER_PARTY_BINDING = 'j_id136:processoParteOutrosInteressadosResumidoTableBinding:j_id455'
 
-    def _access_login(self):
-        r = self._http.get("/pje/login.seam")
-        return r.text
+    QUERY_MOVEMENTS_TEMPLATE = {
 
-    def _sso_auth(self):
-        r = self._http.get("/pje/authenticateSSO.seam")
-        return r.url
+    }
 
-    def _enter_public_query(self):
-        r = self._http.get("/pje/ConsultaPublica/listView.seam")
-        return r.url
-
-    def _get_query_soup(self, term: str) -> BeautifulSoup:
-        data = {
-            "AJAXREQUEST": "_viewRoot",
-            "fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso": "",
-            "mascaraProcessoReferenciaRadio": "on",
-            "fPP:j_id152:processoReferenciaInput": "",
-            "fPP:dnp:nomeParte": "",
-            "fPP:j_id170:nomeAdv": "",
-            "fPP:j_id179:classeProcessualProcessoHidden": "",
-            "tipoMascaraDocumento": "on",
-            "fPP:dpDec:documentoParte": "",
-            "fPP:Decoration:numeroOAB": "",
-            "fPP:Decoration:j_id214": "",
-            "fPP:Decoration:estadoComboOAB": "org.jboss.seam.ui.NoSelectionConverter.noSelectionValue",
-            "fPP": "fPP",
-            "autoScroll": "",
-            "javax.faces.ViewState": "j_id1",
-            "fPP:j_id220": "fPP:j_id220",
-            "AJAX:EVENTS_COUNT": "1"
-        }
-        digs = only_digits(term)
-        if len(digs) == 11:
-            data['fPP:dpDec:documentoParte'] = format_cpf(term)
-        elif len(digs) == 20:
-            data['fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso'] = (
-                format_process_number(term)
-            )
-        url = urljoin(self.BASE_URL, "/consultapublica/ConsultaPublica/listView.seam")
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Origin": self.BASE_URL,
-            "Referer": f"{self.BASE_URL}/consultapublica/ConsultaPublica/listView.seam",
-        }
-
-        r = self._http.post(url, data=data, headers=headers)
-        soup = BeautifulSoup(r.text, 'xml').find('div', attrs=dict(id='fPP:processosGridPanel_body'))
-        self._validate_soup(soup)
-        return soup
-
-    @classmethod
-    def _validate_soup(cls, soup: BeautifulSoup) -> None:
-        if soup is None:
-            raise LibJusBrException("soup is None")
-        alert = soup.find('dt')
-        if alert and alert.text:
-            raise LibJusBrException(alert.text)
-
-    def query_process_list(self, term: str) -> List[SimpleProcessData]:
-        soup = self._get_query_soup(term)
-
-        rows = soup.find('tbody', attrs=dict(id='fPP:processosTable:tb')).find_all('tr')
-        process_list: List[SimpleProcessData] = []
-        for row in rows:
-            tds = row.find_all('td')
-            term_process_number = tds[1].find('b').text
-            first_part, subject = term_process_number.split(' - ')
-            process_class_abv, process_number = first_part.split(' ')
-            plaintiff, defendant = tds[1].contents[-1].text.split(' X ')
-            status, status_at = tds[2].text.rsplit('(', maxsplit=1)
-
-            process_list.append(SimpleProcessData(
-                process_class=tds[1].contents[0].text.strip(),
-                process_class_abv=process_class_abv.strip(),
-                process_number=process_number.strip(),
-                subject=subject.strip(),
-                plaintiff=plaintiff.strip(),
-                defendant=defendant.strip(),
-                status=status.strip(),
-                last_update=to_date_time(
-                    status_at.strip().replace('(', '').replace(')', '')
-                ),
-            ))
-
-        return process_list
-
-    def _extract_detailed_from_url(self, url) -> DetailedProcessData:
-        main_soup = BeautifulSoup(self._http.get(url).text, features='lxml')
-
-        return DetailedProcessData(
-
-        )
-
-    def detail_process_list(self, term: str) -> List[DetailedProcessData]:
-        soup = self._get_query_soup(term)
-        detailed_processes = []
-        rows = soup.find('tbody', attrs=dict(id='fPP:processosTable:tb')).find_all('tr')
-        for row in rows:
-            url = self.BASE_URL + row.find('td').find('a')['onclick'].split(',')[-1].replace("'", '').replace(')', '')
-            detailed_processes.append(self._extract_detailed_from_url(url))
-        return detailed_processes
-
-    def close(self):
-        self._http.close()
+    def _extract_movements(self, soup: BeautifulSoup) -> List[Movement]:
+        movements = []
+        for row in soup.select("table tr"):
+            cols = [td.text.strip() for td in row.find_all("td")]
+            if len(cols) >= 2:
+                movements.append(Movement(date=to_date_time(cols[0]), description=cols[1]))
+        return movements
 
 
 if __name__ == "__main__":
