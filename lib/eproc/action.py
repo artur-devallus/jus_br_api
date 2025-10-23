@@ -169,6 +169,13 @@ class EprocAction(Action[EprocPage]):
         return DocumentParty.of_unknown(doc)
 
     def _extract_party(self, txt):
+        parts = txt.split('   ')
+        if len(parts) == 1:
+            return Party(
+                name=parts[0],
+                documents=[],
+                role=None,
+            )
         person, doc = txt.split('   ')
         doc = self._extract_document(doc)
         return Party(
@@ -270,5 +277,5 @@ class EprocAction(Action[EprocPage]):
             process=self._get_process_data(),
             case_parties=self._get_case_parties(),
             movements=self._get_movements(),
-            attachments=self._get_attachments()
+            # attachments=self._get_attachments()
         )

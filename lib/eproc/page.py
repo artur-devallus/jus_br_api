@@ -100,7 +100,9 @@ class EprocPage(Page):
 
         els = []
         for row in rows:
-            els.append(row.find_elements(By.TAG_NAME, 'td')[index_td].text)
+            parts = row.find_elements(By.TAG_NAME, 'td')
+            if len(parts) >= index_td + 1:
+                els.append(row.find_elements(By.TAG_NAME, 'td')[index_td].text)
 
         return els
 

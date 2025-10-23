@@ -44,7 +44,7 @@ class TestTrf6(unittest.TestCase):
 
     def test_trf6_get_detailed_data_for_cpf_00998338672(self):
         detailed_data = get_trf6_service(self.driver).get_detailed_process(
-            term='009.983.386-72',
+            term='34775889753',
             grade='eproc1g',
         )
 
