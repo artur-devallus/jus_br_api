@@ -66,7 +66,7 @@ class PJePage(Page):
         return self.driver.find_by_id(self.PROCESS_TABLE)
 
     def get_process_rows(self):
-        return self.process_table().find_elements(By.TAG_NAME, 'tr')
+        return self.process_table().find_elements(By.XPATH, './tr')
 
     @classmethod
     def _last_div_text(cls, el):

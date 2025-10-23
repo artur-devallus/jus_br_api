@@ -14,7 +14,7 @@ export const LoginPage: FC = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold tracking-tight">
-            Gugas ADV
+            NexaS One
           </CardTitle>
           <CardDescription>
             Acesse sua conta para continuar

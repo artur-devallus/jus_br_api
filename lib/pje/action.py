@@ -51,8 +51,11 @@ def _all_rows_changed_predicate(driver, id_table, all_rows):
 class PJeAction(Action[PJePage]):
 
     def enter_site(self) -> 'PJeAction':
-        if 'Denied' in self.page.driver.title:
+        if 'denied' in self.page.driver.title.lower():
             raise RuntimeError(f'Access denied for {self.page.driver.current_url}')
+        if 'consulta pública' in self.page.driver.title.lower():
+            self.page.driver.refresh()
+            return self
         self.page.query_process().click()
         self.driver().wait_windows_greather_than(1)
         self.page.close_current_window()
