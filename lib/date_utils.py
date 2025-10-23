@@ -4,6 +4,7 @@ from lib.exceptions import LibJusBrException
 
 
 def to_date_time(date_str: str):
+    date_str = date_str.strip()
     if date_str.count('-') == 2 and date_str.count(':') == 2:
         return datetime.datetime.strptime(date_str[0:19], '%Y-%m-%d %H:%M:%S')
     if date_str.count('/') == 2 and date_str.count(':') == 2:
@@ -12,6 +13,7 @@ def to_date_time(date_str: str):
 
 
 def to_date(date_str: str):
+    date_str = date_str.strip()
     if date_str.count('-') == 2:
         return datetime.datetime.strptime(date_str[0:10], '%Y-%m-%d').date()
     if date_str.count('/') == 2:
@@ -20,6 +22,7 @@ def to_date(date_str: str):
 
 
 def is_date_time(date_str: str):
+    date_str = date_str.strip()
     return (
             date_str.count('-') == 2 or date_str.count('/') == 2
     ) and date_str.count(':') == 2
