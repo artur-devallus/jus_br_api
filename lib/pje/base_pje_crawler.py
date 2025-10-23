@@ -1,20 +1,26 @@
-# lib/pje/base_pje_crawler.py
-from __future__ import annotations
-
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import List, Optional, Dict, Any
 from urllib.parse import urljoin
 
 import bs4
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 
-from lib.array_utils import array_equals, print_array
+from lib.array_utils import array_equals
 from lib.date_utils import to_date, to_date_time
 from lib.exceptions import LibJusBrException
 from lib.format_utils import format_cpf, format_process_number
 from lib.http_client import HttpClient
-from lib.models import SimpleProcessData, DetailedProcessData, ProcessData, CaseParty, Movement, Party, DocumentParty
+from lib.models import (
+    SimpleProcessData,
+    DetailedProcessData,
+    ProcessData,
+    CaseParty,
+    Movement,
+    Party,
+    DocumentParty,
+    MovementAttachment
+)
 from lib.string_utils import only_digits
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
@@ -24,35 +30,58 @@ class BasePjeCrawler(ABC):
     BASE_URL: str
     QUERY_PATH: str
     DETAIL_PATH: str
-    SELECTORS: Dict[str, str]
 
-    QUERY_BODY_TEMPLATE: Dict[str, Any]
+    SELECTOR_TABLE_CONTAINER: str = 'div#fPP\\:processosGridPanel_body'
+    SELECTOR_TABLE_ROWS: str = 'tbody#fPP\\:processosTable\\:tb > tr'
+    SELECTOR_PROCESS_DATA: str
+
+    TABLE_MOVEMENTS_PATTERN: str = ':processoEvento:tb'
+
+    QUERY_BODY_TEMPLATE: Dict[str, Any] = {
+        "AJAXREQUEST": "_viewRoot",
+        "fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso": "",
+        "mascaraProcessoReferenciaRadio": "on",
+        "fPP:j_id152:processoReferenciaInput": "",
+        "fPP:dnp:nomeParte": "",
+        "tipoMascaraDocumento": "on",
+        "fPP:dpDec:documentoParte": "",
+        "fPP:Decoration:numeroOAB": "",
+        "fPP:Decoration:estadoComboOAB": "org.jboss.seam.ui.NoSelectionConverter.noSelectionValue",
+        "fPP": "fPP",
+        "autoScroll": "",
+        "javax.faces.ViewState": "j_id1",
+        "AJAX:EVENTS_COUNT": "1"
+    }
 
     ACTIVE_PARTY_BINDING: str
     PASSIVE_PARTY_BINDING: str
     OTHER_PARTY_BINDING: str
 
-    QUERY_MOVEMENTS_TEMPLATE: Dict[str, Any]
+    MOVEMENT_AJAX_REQUEST: str
+    MOVEMENT_AJAX_BINDING: str
 
     def __init__(self, proxy: Optional[str] = None, enable_logs: bool = False):
-        self.http = HttpClient(self.BASE_URL, enable_logs=enable_logs)
+        self.http = HttpClient(
+            self.BASE_URL,
+            enable_logs=enable_logs,
+            proxy=proxy
+        )
         if proxy:
             self.http.session.proxies = {"https": proxy, "http": proxy}
         self._init_session()
-        self._view_state = 1
+        self._view_state = 'j_id1'
 
     def query_process_list(self, term: str) -> List[SimpleProcessData]:
         soup = self._get_query_soup(term)
-        rows = soup.select(self.SELECTORS["table_rows"])
+        rows = soup.select(self.SELECTOR_TABLE_ROWS)
         return [self._parse_list_row(row) for row in rows]
 
     def detail_process_list(self, term: str) -> List[DetailedProcessData]:
         results = []
         soup = self._get_query_soup(term)
-        rows = soup.select(self.SELECTORS["table_rows"])
+        rows = soup.select(self.SELECTOR_TABLE_ROWS)
         for row in rows:
             results.append(self._extract_detail(self._extract_detail_url(row)))
-            self._update_view_state()
         return results
 
     def _init_session(self):
@@ -60,8 +89,8 @@ class BasePjeCrawler(ABC):
         self.http.get('/pje/login.seam')
         self.http.get(self.QUERY_PATH)
 
-    def _update_view_state(self):
-        self._view_state += 1
+    def _update_view_state(self, soup):
+        self._view_state = soup.find('input', id='javax.faces.ViewState')['value']
 
     def _get_query_soup(self, term: str) -> BeautifulSoup:
         url = urljoin(self.BASE_URL, self.QUERY_PATH)
@@ -70,10 +99,9 @@ class BasePjeCrawler(ABC):
         response = self.http.post(url, data=data, headers=headers)
 
         soup = BeautifulSoup(response.text, 'lxml')
-        container = soup.select_one(self.SELECTORS["table_container"])
+        container = soup.select_one(self.SELECTOR_TABLE_CONTAINER)
         if not container:
             raise LibJusBrException("Não foi possível encontrar a tabela de resultados.")
-        self._update_view_state()
         return container
 
     def _post_query_detail(self, referer, data) -> BeautifulSoup:
@@ -81,7 +109,9 @@ class BasePjeCrawler(ABC):
         headers = self._build_headers(referer)
         response = self.http.post(url, data=data, headers=headers)
 
-        return BeautifulSoup(response.text, 'lxml')
+        soup = BeautifulSoup(response.text, 'lxml')
+        self._update_view_state(soup)
+        return soup
 
     def _build_headers(self, referer: str) -> Dict[str, str]:
         return {
@@ -101,7 +131,8 @@ class BasePjeCrawler(ABC):
             )
         return body
 
-    def _parse_list_row(self, row) -> SimpleProcessData:
+    @classmethod
+    def _parse_list_row(cls, row) -> SimpleProcessData:
         tds = row.find_all('td')
         term_process_number = tds[1].find('b').text
         first_part, subject = term_process_number.split(' - ')
@@ -128,10 +159,11 @@ class BasePjeCrawler(ABC):
     def _extract_detail(self, url: str) -> DetailedProcessData:
         html = self.http.get(url).text
         soup = BeautifulSoup(html, 'lxml')
+        self._update_view_state(soup)
         return DetailedProcessData(
             process=self._extract_process_data(soup),
             case_parties=self._extract_case_parties(soup, url),
-            movements=self._extract_movements(soup),
+            movements=self._extract_movements(soup, url),
         )
 
     @classmethod
@@ -142,7 +174,7 @@ class BasePjeCrawler(ABC):
         return text
 
     def _extract_process_data(self, soup: BeautifulSoup) -> ProcessData:
-        span_tags = soup.select(self.SELECTORS["process_data"])
+        span_tags = soup.select(self.SELECTOR_PROCESS_DATA)
         span_dict = {
             tg.select_one('div > div.name').text.strip(): tg.select_one('div > div.value').text.strip()
             for tg in span_tags
@@ -154,6 +186,8 @@ class BasePjeCrawler(ABC):
                 tg.select_one('div > div.name').text.strip() == ''
             ]
             for empty in empties:
+                if empty.text.strip() == '':
+                    continue
                 key, val = empty.text.strip().split('\n', maxsplit=1)
                 span_dict[key] = val.strip().replace('\t', '').replace('\n\n', ' - ')
 
@@ -174,7 +208,7 @@ class BasePjeCrawler(ABC):
         return {
             "AJAXREQUEST": "_viewRoot",
             binding: binding,
-            'javax.faces.ViewState': f'j_id{self._view_state}',
+            'javax.faces.ViewState': self._view_state,
             'ajaxSingle': page_binding,
             page_binding: str(page),
             "AJAX:EVENTS_COUNT": "1"
@@ -182,6 +216,20 @@ class BasePjeCrawler(ABC):
 
     def _build_active_party_body(self, page: int) -> Dict[str, Any]:
         return self._build_party_body(page, self.ACTIVE_PARTY_BINDING)
+
+    def _build_movements_body(self, page: int) -> Dict[str, Any]:
+        next_binding = int(only_digits(self.MOVEMENT_AJAX_BINDING.split(':')[-1])) + 1
+        data = {
+            "AJAXREQUEST": self.MOVEMENT_AJAX_REQUEST,
+            f"{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding}": str(page),
+            f'{self.MOVEMENT_AJAX_BINDING}': f'{self.MOVEMENT_AJAX_BINDING}',
+            'autoScroll': '',
+            'javax.faces.ViewState': self._view_state,
+            f'{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding + 1}': f'{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding + 1}',
+            "AJAX:EVENTS_COUNT": "1",
+            '': ''
+        }
+        return data
 
     def _build_passive_party_body(self, page: int) -> Dict[str, Any]:
         return self._build_party_body(page, self.PASSIVE_PARTY_BINDING)
@@ -225,7 +273,7 @@ class BasePjeCrawler(ABC):
 
     @classmethod
     def _map_tag_to_party(cls, tag) -> Party:
-        party_txt = tag.find('td').text
+        party_txt = tag.find('td').select_one('span > div > span').text
         parts = party_txt.split(' - ')
         documents = parts[1:len(parts) - 1]
         last_document, role = parts[len(parts) - 1].split(' (')
@@ -250,20 +298,21 @@ class BasePjeCrawler(ABC):
             'tbody#' + self._get_table_binding_for(binding).replace(':', '\\:') + ' > tr'
         )]
 
-    def _extract_paginated_parties(self, referer, binding, body_fn) -> List[Party]:
+    def _extract_paginated_parties(self, referer, parties, binding, body_fn) -> List[Party]:
         page = 2
         all_parties = []
-        last_rows = []
+        last_rows = [x for x in parties]
         while True:
             tmp_soup = self._post_query_detail(referer, body_fn(page))
             tmp_rows = self._map_soup_to_parties(tmp_soup, binding)
-            if len(tmp_rows) < 10 or array_equals(last_rows, tmp_rows):
+            if array_equals(last_rows, tmp_rows):
                 break
 
             last_rows = tmp_rows
-            print_array(tmp_rows)
             all_parties.extend(tmp_rows)
             print(f'finished active party page {page}')
+            if len(tmp_rows) < 10:
+                break
             page += 1
         return all_parties
 
@@ -271,7 +320,7 @@ class BasePjeCrawler(ABC):
         parties = self._map_soup_to_parties(soup, binding)
         if len(parties) == 10:
             parties.extend(
-                self._extract_paginated_parties(url, binding, body_fn)
+                self._extract_paginated_parties(url, parties, binding, body_fn)
             )
         return parties
 
@@ -297,9 +346,57 @@ class BasePjeCrawler(ABC):
             others=self._extract_other_party(soup, url),
         )
 
-    @abstractmethod
-    def _extract_movements(self, soup: BeautifulSoup) -> List[Movement]:
-        ...
+    def _map_soup_to_movements(self, soup: BeautifulSoup) -> List[Movement]:
+        rows = next(
+            (x for x in soup.find_all('tbody', id=True) if x['id'].endswith(self.TABLE_MOVEMENTS_PATTERN))
+        ).select('tr')
+        return list(map(self._movement_from_tr, rows))
+
+    def _extract_paginated_movements(self, referer, last_movements):
+        page = 2
+        all_movements = []
+        last_rows = [x for x in last_movements]
+        while True:
+            tmp_soup = self._post_query_detail(referer, self._build_movements_body(page))
+            tmp_rows = self._map_soup_to_movements(tmp_soup)
+            if array_equals(last_rows, tmp_rows):
+                break
+
+            last_rows = tmp_rows
+            all_movements.extend(tmp_rows)
+            print(f'finished movements page {page}')
+
+            if len(tmp_rows) < 15:
+                break
+
+            page += 1
+        return all_movements
+
+    def _extract_movements(self, soup: BeautifulSoup, url) -> List[Movement]:
+        movements = self._map_soup_to_movements(soup)
+        if len(movements) == 15:
+            movements.extend(self._extract_paginated_movements(url, movements))
+        return movements
+
+    @classmethod
+    def _movement_from_tr(cls, tr: bs4.Tag) -> Movement:
+        td1, td2 = [x.text for x in tr.find_all('td')]
+        created_at, description = td1.split(' - ', maxsplit=1)
+        if td2:
+            document_date, document_ref = td2.split(' - ', maxsplit=1)
+        else:
+            document_ref = None
+            document_date = None
+        return Movement(
+            created_at=to_date_time(created_at),
+            description=description.strip(),
+            attachments=[MovementAttachment(
+                document_date=to_date_time(
+                    document_date
+                ) if document_date else None,
+                document_ref=document_ref,
+            )] if document_ref else []
+        )
 
     def close(self):
         self.http.close()

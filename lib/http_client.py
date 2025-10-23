@@ -4,7 +4,12 @@ import httpx
 
 
 class HttpClient:
-    def __init__(self, base_url: str | None = None, timeout: int = 30, enable_logs: bool = False):
+    def __init__(
+            self, base_url: str | None = None,
+            timeout: float = 30,
+            enable_logs: bool = False,
+            proxy: str = None
+    ):
         self.base_url = base_url.rstrip("/") if base_url else None
         self.enable_logs = enable_logs
         self.session: httpx.Client = httpx.Client(
@@ -14,6 +19,10 @@ class HttpClient:
             event_hooks=dict(
                 request=[self.add_host, self.log_request],
             ),
+            mounts={
+                'http://': httpx.HTTPTransport(proxy=proxy),
+                'https://': httpx.HTTPTransport(proxy=proxy),
+            } if proxy else None,
             headers={
                 "User-Agent": (
                     "Mozilla/5.0 (X11; Linux x86_64) "
@@ -29,11 +38,21 @@ class HttpClient:
         )
 
     def get(self, url: str, **kwargs) -> httpx.Response:
-        return self.session.get(url, **kwargs)
+        last_ex = None
+        for i in range(3):
+            try:
+                return self.session.get(url, **kwargs)
+            except httpx.ReadError as ex:
+                last_ex = ex
+        raise last_ex
 
     def post(self, url: str, data: dict | str | None = None, **kwargs) -> httpx.Response:
         res = self.session.post(url, data=data, **kwargs)
-        res.raise_for_status()
+        if res.is_error:
+            print(url)
+            print(data)
+            print(kwargs)
+            res.raise_for_status()
         return res
 
     def close(self):
