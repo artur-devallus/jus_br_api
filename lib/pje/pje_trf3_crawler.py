@@ -13,13 +13,6 @@ class _PjeTrf3Crawler(BasePjeCrawler):
     QUERY_PATH = "/pje/ConsultaPublica/listView.seam"
     DETAIL_PATH = "/pje/ConsultaPublica/DetalheProcessoConsultaPublica/listView.seam"
 
-
-    ACTIVE_PARTY_BINDING = 'j_id145:processoPartesPoloAtivoResumidoList:j_id336'
-    PASSIVE_PARTY_BINDING = 'j_id145:processoPartesPoloPassivoResumidoList:j_id400'
-
-    MOVEMENT_AJAX_REQUEST = 'j_id145:j_id473'
-    MOVEMENT_AJAX_BINDING = 'j_id145:j_id556'
-
     def _build_query_body(self, term):
         body = super()._build_query_body(term)
         body["fPP:j_id188:nomeAdv"] = ""
@@ -27,9 +20,6 @@ class _PjeTrf3Crawler(BasePjeCrawler):
         body["fPP:Decoration:j_id222"] = ""
         body["fPP:j_id243"] = "fPP:j_id243"
         return body
-
-    def _extract_other_party(self, soup: BeautifulSoup, url: str) -> List[Party]:
-        return []
 
 
 class Pje1GTrf3Crawler(_PjeTrf3Crawler):

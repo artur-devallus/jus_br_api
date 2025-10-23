@@ -23,7 +23,7 @@ from lib.models import (
     DocumentParty,
     MovementAttachment
 )
-from lib.proxy.proxies import proxy_service
+from lib.proxy import proxy_service
 from lib.string_utils import only_digits
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
@@ -41,8 +41,6 @@ class BasePjeCrawler(ABC):
     SELECTOR_TABLE_ROWS: str = 'tbody#fPP\\:processosTable\\:tb > tr'
     SELECTOR_PROCESS_DATA = 'table > tbody > tr > td > span'
 
-    TABLE_MOVEMENTS_PATTERN: str = ':processoEvento:tb'
-
     QUERY_BODY_TEMPLATE: Dict[str, Any] = {
         "AJAXREQUEST": "_viewRoot",
         "fPP:numProcesso-inputNumeroProcessoDecoration:numProcesso-inputNumeroProcesso": "",
@@ -59,12 +57,10 @@ class BasePjeCrawler(ABC):
         "AJAX:EVENTS_COUNT": "1"
     }
 
-    ACTIVE_PARTY_BINDING: str
-    PASSIVE_PARTY_BINDING: str
-    OTHER_PARTY_BINDING: str
-
-    MOVEMENT_AJAX_REQUEST: str
-    MOVEMENT_AJAX_BINDING: str
+    TABLE_MOVEMENTS_PART_NAME: str = 'processoEvento'
+    ACTIVE_PARTY_PART_NAME: str = 'PoloAtivo'
+    PASSIVE_PARTY_PART_NAME: str = 'PoloPassivo'
+    OTHER_PARTY_PART_NAME: str = 'OutrosInteressados'
 
     def __init__(self, use_proxy: bool = False):
         if use_proxy:
@@ -222,7 +218,7 @@ class BasePjeCrawler(ABC):
             referenced_process_number=span_dict.get('Processo referência'),
         )
 
-    def _build_party_body(self, page: int, binding: str) -> Dict[str, Any]:
+    def _build_pagination_party_body(self, page: int, binding: str) -> Dict[str, Any]:
         next_binding = int(only_digits(binding.split(':')[-1])) + 1
         page_binding = binding + ':' + f'j_id{next_binding}'
         return {
@@ -234,28 +230,24 @@ class BasePjeCrawler(ABC):
             "AJAX:EVENTS_COUNT": "1"
         }
 
-    def _build_active_party_body(self, page: int) -> Dict[str, Any]:
-        return self._build_party_body(page, self.ACTIVE_PARTY_BINDING)
-
-    def _build_movements_body(self, page: int) -> Dict[str, Any]:
-        next_binding = int(only_digits(self.MOVEMENT_AJAX_BINDING.split(':')[-1])) + 1
+    def _build_movements_pagination_body(
+            self,
+            page: int,
+            ajax_request,
+            ajax_binding
+    ) -> Dict[str, Any]:
+        next_binding = int(only_digits(ajax_binding.split(':')[-1])) + 1
         data = {
-            "AJAXREQUEST": self.MOVEMENT_AJAX_REQUEST,
-            f"{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding}": str(page),
-            f'{self.MOVEMENT_AJAX_BINDING}': f'{self.MOVEMENT_AJAX_BINDING}',
+            "AJAXREQUEST": ajax_request,
+            f"{ajax_binding}:j_id{next_binding}": str(page),
+            f'{ajax_binding}': f'{ajax_binding}',
             'autoScroll': '',
             'javax.faces.ViewState': self._view_state,
-            f'{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding + 1}': f'{self.MOVEMENT_AJAX_BINDING}:j_id{next_binding + 1}',
+            f'{ajax_binding}:j_id{next_binding + 1}': f'{ajax_binding}:j_id{next_binding + 1}',
             "AJAX:EVENTS_COUNT": "1",
             '': ''
         }
         return data
-
-    def _build_passive_party_body(self, page: int) -> Dict[str, Any]:
-        return self._build_party_body(page, self.PASSIVE_PARTY_BINDING)
-
-    def _build_other_party_body(self, page: int) -> Dict[str, Any]:
-        return self._build_party_body(page, self.OTHER_PARTY_BINDING)
 
     @classmethod
     def _get_table_binding_for(cls, binding):
@@ -318,12 +310,12 @@ class BasePjeCrawler(ABC):
             'tbody#' + self._get_table_binding_for(binding).replace(':', '\\:') + ' > tr'
         )]
 
-    def _extract_paginated_parties(self, referer, parties, binding, body_fn) -> List[Party]:
+    def _extract_paginated_parties(self, referer, parties, binding) -> List[Party]:
         page = 2
         all_parties = []
         last_rows = [x for x in parties]
         while True:
-            tmp_soup = self._post_query_detail(referer, body_fn(page))
+            tmp_soup = self._post_query_detail(referer, self._build_pagination_party_body(page, binding))
             tmp_rows = self._map_soup_to_parties(tmp_soup, binding)
             if array_equals(last_rows, tmp_rows):
                 break
@@ -335,27 +327,51 @@ class BasePjeCrawler(ABC):
             page += 1
         return all_parties
 
-    def _extract_party(self, soup: BeautifulSoup, url, binding, body_fn) -> List[Party]:
+    def _extract_party(self, soup: BeautifulSoup, url, binding) -> List[Party]:
+        if binding is None:
+            return []
         parties = self._map_soup_to_parties(soup, binding)
         if len(parties) == 10:
             parties.extend(
-                self._extract_paginated_parties(url, parties, binding, body_fn)
+                self._extract_paginated_parties(url, parties, binding)
             )
         return parties
 
+    @classmethod
+    def _find_party_binding(cls, soup: BeautifulSoup, part_name: str):
+        return next((x['id'] for x in soup.select('tfoot > tr > td > form') if part_name in x['id']), None)
+
+    def _find_active_party_binding(self, soup: BeautifulSoup):
+        binding = self._find_party_binding(soup, self.ACTIVE_PARTY_PART_NAME)
+        if binding is None:
+            log.warning(f'No binding for {self.ACTIVE_PARTY_PART_NAME}')
+        return binding
+
+    def _find_passive_party_binding(self, soup: BeautifulSoup):
+        binding = self._find_party_binding(soup, self.PASSIVE_PARTY_PART_NAME)
+        if binding is None:
+            log.warning(f'No binding for {self.PASSIVE_PARTY_PART_NAME}')
+        return binding
+
+    def _find_other_party_binding(self, soup: BeautifulSoup):
+        binding = self._find_party_binding(soup, self.OTHER_PARTY_PART_NAME)
+        if binding is None:
+            log.warning(f'No binding for {self.OTHER_PARTY_PART_NAME}')
+        return binding
+
     def _extract_active_party(self, soup: BeautifulSoup, url: str) -> List[Party]:
         return self._extract_party(
-            soup, url, self.ACTIVE_PARTY_BINDING, self._build_active_party_body
+            soup, url, self._find_active_party_binding(soup)
         )
 
     def _extract_passive_party(self, soup: BeautifulSoup, url: str) -> List[Party]:
         return self._extract_party(
-            soup, url, self.PASSIVE_PARTY_BINDING, self._build_passive_party_body
+            soup, url, self._find_passive_party_binding(soup)
         )
 
     def _extract_other_party(self, soup: BeautifulSoup, url: str) -> List[Party]:
         return self._extract_party(
-            soup, url, self.OTHER_PARTY_BINDING, self._build_other_party_body
+            soup, url, self._find_other_party_binding(soup)
         )
 
     def _extract_case_parties(self, soup: BeautifulSoup, url) -> CaseParty:
@@ -371,16 +387,19 @@ class BasePjeCrawler(ABC):
 
     def _map_soup_to_movements(self, soup: BeautifulSoup) -> List[Movement]:
         rows = next(
-            (x for x in soup.find_all('tbody', id=True) if x['id'].endswith(self.TABLE_MOVEMENTS_PATTERN))
+            (x for x in soup.find_all('tbody', id=True) if self.TABLE_MOVEMENTS_PART_NAME in x['id'])
         ).select('tr')
         return list(map(self._movement_from_tr, rows))
 
-    def _extract_paginated_movements(self, referer, last_movements):
+    def _extract_paginated_movements(self, referer, last_movements, ajax_request, ajax_binding):
         page = 2
         all_movements = []
         last_rows = [x for x in last_movements]
         while True:
-            tmp_soup = self._post_query_detail(referer, self._build_movements_body(page))
+            tmp_soup = self._post_query_detail(referer, self._build_movements_pagination_body(
+                page, ajax_request, ajax_binding
+            ))
+            ajax_request, ajax_binding = self._get_ajax_request_and_binding(tmp_soup)
             tmp_rows = self._map_soup_to_movements(tmp_soup)
             if array_equals(last_rows, tmp_rows):
                 break
@@ -394,10 +413,25 @@ class BasePjeCrawler(ABC):
             page += 1
         return all_movements
 
+    def _get_ajax_request_and_binding(self, soup: BeautifulSoup):
+        form = next((
+            x for x in soup.find_all('div', id=True) if 'body' in x['id'] and self.TABLE_MOVEMENTS_PART_NAME in x['id']
+        )).select('div > form')[-1]
+        action = form['action'].split("','")
+
+        try:
+            ajax_binding = form['name']
+            ajax_request = next((x for x in action if 'containerId' in x)).split(':', 1)[-1].replace('"', '').replace(
+                "'", '')
+            return ajax_request, ajax_binding
+        except StopIteration:
+            return None, None
+
     def _extract_movements(self, soup: BeautifulSoup, url) -> List[Movement]:
         movements = self._map_soup_to_movements(soup)
-        if len(movements) == 15:
-            movements.extend(self._extract_paginated_movements(url, movements))
+        ajax_request, ajax_binding = self._get_ajax_request_and_binding(soup)
+        if len(movements) == 15 and ajax_binding and ajax_request:
+            movements.extend(self._extract_paginated_movements(url, movements, ajax_request, ajax_binding))
         return movements
 
     @classmethod

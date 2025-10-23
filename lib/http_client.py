@@ -11,6 +11,7 @@ _retry_forbidden = retry_if_exception(
 _retry = (
         _retry_forbidden |
         retry_if_exception_type(httpx.ReadError) |
+        retry_if_exception_type(httpx.ReadTimeout) |
         retry_if_exception_type(httpx.ConnectError)
 )
 
@@ -18,7 +19,7 @@ _retry = (
 class HttpClient:
     def __init__(
             self, base_url: str | None = None,
-            timeout: float = 30,
+            timeout: float = 15,
             enable_logs: bool = False,
             proxy: str = None
     ):

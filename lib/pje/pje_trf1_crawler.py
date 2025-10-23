@@ -6,13 +6,6 @@ class _PjeTrf1Crawler(BasePjeCrawler):
     QUERY_PATH = "/consultapublica/ConsultaPublica/listView.seam"
     DETAIL_PATH = "/consultapublica/ConsultaPublica/DetalheProcessoConsultaPublica/listView.seam"
 
-    ACTIVE_PARTY_BINDING = 'j_id136:processoPartesPoloAtivoResumidoTableBinding:j_id325'
-    PASSIVE_PARTY_BINDING = 'j_id136:processoPartesPoloPassivoResumidoTableBinding:j_id390'
-    OTHER_PARTY_BINDING = 'j_id136:processoParteOutrosInteressadosResumidoTableBinding:j_id455'
-
-    MOVEMENT_AJAX_REQUEST = 'j_id136:j_id465'
-    MOVEMENT_AJAX_BINDING = 'j_id136:j_id546'
-
     def _build_query_body(self, term):
         body = super()._build_query_body(term)
         body["fPP:j_id170:nomeAdv"] = ""
