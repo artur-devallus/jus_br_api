@@ -96,8 +96,15 @@ class Attachment:
 
 
 @dataclasses.dataclass(frozen=True)
+class AdditionalInfo:
+    name: str = dataclasses.field()
+    value: str = dataclasses.field()
+
+
+@dataclasses.dataclass(frozen=True)
 class DetailedProcessData:
     process: ProcessData = dataclasses.field()
     case_parties: CaseParty = dataclasses.field()
     movements: List[Movement] = dataclasses.field(default_factory=list)
     attachments: List[Attachment] = dataclasses.field(default_factory=list)
+    additional_info: List[AdditionalInfo] = dataclasses.field(default_factory=list)

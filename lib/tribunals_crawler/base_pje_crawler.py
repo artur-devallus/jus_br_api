@@ -15,10 +15,8 @@ from lib.models import (
     SimpleProcessData,
     DetailedProcessData,
     ProcessData,
-    CaseParty,
     Movement,
     Party,
-    DocumentParty,
     MovementAttachment
 )
 from lib.string_utils import only_digits
@@ -244,35 +242,6 @@ class BasePjeCrawler(AbstractCrawler):
         return ':'.join(parts[0:len(parts) - 1]) + ':tb'
 
     @classmethod
-    def _extract_document(cls, doc) -> DocumentParty | None:
-        doc = str(doc).upper()
-        only_digits_doc = only_digits(doc)
-        if 'CPF' in str(doc):
-            return DocumentParty.of_cpf(
-                doc
-                .replace('CPF', '')
-                .replace('.', '')
-                .replace('-', '')
-                .replace(':', '')
-                .strip()
-            )
-        elif 'CNPJ' in str(doc):
-            return DocumentParty.of_cnpj(
-                doc
-                .replace('CNPJ', '')
-                .replace('.', '')
-                .replace('-', '')
-                .replace(':', '')
-                .replace('/', '')
-                .strip()
-            )
-        elif 'OAB' in str(doc):
-            return DocumentParty.of_oab(doc.replace('OAB', '').strip())
-        if only_digits_doc:
-            raise LibJusBrException(f'cannot get document for {doc}')
-        return DocumentParty.of_unknown(doc)
-
-    @classmethod
     def _map_tag_to_party(cls, tag) -> Party:
         party_txt = tag.find('td').select_one('span > div > span').text
         parts = party_txt.split(' - ')
@@ -361,17 +330,6 @@ class BasePjeCrawler(AbstractCrawler):
     def _extract_other_party(self, soup: BeautifulSoup, url: str) -> List[Party]:
         return self._extract_party(
             soup, url, self._find_other_party_binding(soup)
-        )
-
-    def _extract_case_parties(self, soup: BeautifulSoup, url) -> CaseParty:
-        active = self._extract_active_party(soup, url)
-        assert len(active) > 0
-        passive = self._extract_passive_party(soup, url)
-        assert len(passive) > 0
-        return CaseParty(
-            active=active,
-            passive=passive,
-            others=self._extract_other_party(soup, url),
         )
 
     def _map_soup_to_movements(self, soup: BeautifulSoup) -> List[Movement]:
