@@ -1,5 +1,5 @@
 from lib.json_utils import json_dump
-from lib.pje.base_pje_crawler import BasePjeCrawler
+from lib.tribunals_crawler.base_pje_crawler import BasePjeCrawler
 
 
 class _PjeTrf1Crawler(BasePjeCrawler):

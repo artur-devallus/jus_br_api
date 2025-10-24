@@ -1,6 +1,5 @@
 import time
 import warnings
-from abc import ABC
 from typing import List, Dict, Any
 from urllib.parse import urljoin
 
@@ -11,7 +10,6 @@ from lib.array_utils import array_equals
 from lib.date_utils import to_date, to_date_time
 from lib.exceptions import LibJusBrException
 from lib.format_utils import format_cpf, format_process_number
-from lib.http_client import HttpClient
 from lib.log_utils import get_logger
 from lib.models import (
     SimpleProcessData,
@@ -23,16 +21,15 @@ from lib.models import (
     DocumentParty,
     MovementAttachment
 )
-from lib.proxy import proxy_service
 from lib.string_utils import only_digits
+from lib.tribunals_crawler.abstract_crawler import AbstractCrawler
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 log = get_logger('pje_crawler')
 
 
-class BasePjeCrawler(ABC):
-    BASE_URL: str
+class BasePjeCrawler(AbstractCrawler):
     QUERY_PATH: str
     DETAIL_PATH: str
     DELAY_SECONDS: int = 0.75
@@ -63,15 +60,7 @@ class BasePjeCrawler(ABC):
     OTHER_PARTY_PART_NAME: str = 'OutrosInteressados'
 
     def __init__(self, use_proxy: bool = False):
-        if use_proxy:
-            proxy = proxy_service.get_fastest_proxy(self.BASE_URL)
-        else:
-            proxy = None
-        self.http = HttpClient(
-            self.BASE_URL,
-            proxy=proxy
-        )
-        self._init_session()
+        super().__init__(use_proxy)
         self._view_state = 'j_id1'
 
     def __enter__(self):

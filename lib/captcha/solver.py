@@ -17,7 +17,7 @@ def solve_image_captcha(img_b64_string, numeric=0):
     return code
 
 
-def solve_cloudflare_captcha(sitekey, url):
-    result = solver.turnstile(sitekey=sitekey, url=url)
+def solve_cloudflare_captcha(sitekey, url, **kwargs):
+    result = solver.turnstile(sitekey=sitekey, url=url, **kwargs)
     code = result.get('code')
     return code

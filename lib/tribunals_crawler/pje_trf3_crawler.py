@@ -1,12 +1,5 @@
-import dataclasses
-import json
-from typing import List
-
-from bs4 import BeautifulSoup
-
-from lib.json_utils import default_json_encoder, json_dump
-from lib.models import Party
-from lib.pje.base_pje_crawler import BasePjeCrawler
+from lib.json_utils import json_dump
+from lib.tribunals_crawler.base_pje_crawler import BasePjeCrawler
 
 
 class _PjeTrf3Crawler(BasePjeCrawler):
